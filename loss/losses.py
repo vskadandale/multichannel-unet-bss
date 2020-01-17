@@ -19,13 +19,16 @@ class IndividualLosses(torch.nn.Module):
         super(IndividualLosses, self).__init__()
         self.main_device = main_device
         self.L1Loss = torch.nn.L1Loss().to(main_device)
-        self.loss_terms=torch.empty([len(SOURCES_SUBSET)])
 
     def forward(self, x):
         _, _, gt_masks, pred_masks = x
-        for idx in range(len(SOURCES_SUBSET)):
-            self.loss_terms[idx] = self.L1Loss(pred_masks[:, idx], gt_masks[:, idx])
-        return self.loss_terms
+        l1 = self.L1Loss(pred_masks[:, 0], gt_masks[:, 0])
+        l2 = self.L1Loss(pred_masks[:, 1], gt_masks[:, 1])
+        if K == 4:
+            l3 = self.L1Loss(pred_masks[:, 2], gt_masks[:, 2])
+            l4 = self.L1Loss(pred_masks[:, 3], gt_masks[:, 3])
+            return [l1, l2, l3, l4]
+        return [l1, l2]
 
 class EnergyBasedLoss(torch.nn.Module):
     def __init__(self, main_device):

@@ -136,11 +136,10 @@ class DWA(pytorchfw):
                     inputs = self._allocate_tensor(inputs)
                     output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                     self.component_losses = self.criterion(output)
-                    if K==2:
+                    if K == 2:
                         [self.l1, self.l2] = self.component_losses
-                    elif K==4:
+                    elif K == 4:
                         [self.l1, self.l2, self.l3, self.l4] = self.component_losses
-
                     self.loss = torch.mean(
                         sum(self.lambda_weight[i, self.epoch] * self.component_losses[i] for i in range(self.K)))
                     self.optimizer.zero_grad()
@@ -148,9 +147,9 @@ class DWA(pytorchfw):
                     self.avg_cost[self.epoch] += np.array(self.cost) / self.train_batches
                     self.gradients()
                     self.optimizer.step()
-                    if K==2:
+                    if K == 2:
                         self.cost = [self.l1.item(), self.l2.item()]
-                    elif K==4:
+                    elif K == 4:
                         self.cost = [self.l1.item(), self.l2.item(), self.l3.item(), self.l4.item()]
 
                     pbar.set_postfix(loss=self.loss.item())
@@ -183,6 +182,10 @@ class DWA(pytorchfw):
                 inputs = self._allocate_tensor(inputs)
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                 self.component_losses = self.criterion(output)
+                if K == 2:
+                    [self.l1, self.l2] = self.component_losses
+                elif K == 4:
+                    [self.l1, self.l2, self.l3, self.l4] = self.component_losses
                 self.loss = torch.mean(
                     sum(self.lambda_weight[i, self.epoch] * self.component_losses[i] for i in range(self.K)))
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
@@ -205,13 +208,13 @@ class DWA(pytorchfw):
 
             if self.state == 'train':
                 if K == 2:
-                    self.writer.add_scalars('loss', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('loss', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
                 elif K == 4:
-                    self.writer.add_scalars('loss', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('loss', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
-                    self.writer.add_scalars('loss', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
-                    self.writer.add_scalars('loss', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
 
         else:
             self.l1 = self.l1_.data.update_epoch(self.state)
@@ -221,32 +224,28 @@ class DWA(pytorchfw):
                 self.l4 = self.l4_.data.update_epoch(self.state)
 
             if K == 2:
-                self.writer.add_scalars('loss_epoch', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                self.writer.add_scalars('loss_epoch', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
             elif K == 4:
-                self.writer.add_scalars('loss_epoch', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                self.writer.add_scalars('loss_epoch', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
-                self.writer.add_scalars('loss_epoch', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
-                self.writer.add_scalars('loss_epoch', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
 
         if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
             text = visualization[1]
-            self.writer.add_text('Filepath', text[-1], iter)
-
-            if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
-                text = visualization[1]
-                self.writer.add_text('Filepath', text[-1], iter_val)
-                phase = visualization[0].detach().cpu().clone().numpy()
-                gt_mags, mix_mag, gt_masks, pred_masks = output
-                if len(text) == BATCH_SIZE:
-                    grid_unwarp = self.grid_unwarp
-                else:  # for the last batch, where the number of samples are generally lesser than the batch_size
-                    grid_unwarp = torch.from_numpy(
-                        warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
-                pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
-                gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
-                oracle_spec = (mix_mag * gt_masks_linear)
-                pred_spec = (mix_mag * pred_masks_linear)
+            self.writer.add_text('Filepath', text[-1], iter_val)
+            phase = visualization[0].detach().cpu().clone().numpy()
+            gt_mags, mix_mag, gt_masks, pred_masks = output
+            if len(text) == BATCH_SIZE:
+                grid_unwarp = self.grid_unwarp
+            else:  # for the last batch, where the number of samples are generally lesser than the batch_size
+                grid_unwarp = torch.from_numpy(
+                    warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+            pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
+            gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
+            oracle_spec = (mix_mag * gt_masks_linear)
+            pred_spec = (mix_mag * pred_masks_linear)
 
             for i, sample in enumerate(text):
                 sample_id = os.path.basename(sample)[:-4]

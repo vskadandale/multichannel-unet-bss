@@ -13,6 +13,7 @@ from tqdm import tqdm
 from loss.losses import *
 from settings import *
 
+
 class EnergyBased(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
         super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)

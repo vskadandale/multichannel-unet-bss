@@ -22,7 +22,7 @@ STFT_WIDTH=int((TARGET_SAMPLING_RATE * DURATION / HOP_LENGTH) + 1)   # 256=(1088
 K = len(SOURCES_SUBSET)  # Number of instruments
 #self.rootdir = set_path(EXPERIMENTS_FOLDER)
 BATCH_SIZE = 16
-LR = 0.001                          # \\TODO 0.01
+LR = 0.01                          # \\TODO 0.01
 EPOCHS = 60000
 DWA_TEMP = 2
 MOMENTUM = 0                        # \\TODO 0.9
