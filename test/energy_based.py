@@ -17,15 +17,21 @@ from collections import  OrderedDict
 from settings import *
 
 
-class Baseline(pytorchfw):
+class EnergyBased(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
-        super(Baseline, self).__init__(model, rootdir, workname, main_device, trackgrad)
+        super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
         self.audio_dumps_path=os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.audio_dumps_folder = os.path.join(self.audio_dumps_path, TEST_UNET_CONFIG, 'test')
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, TEST_UNET_CONFIG, 'test')
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+
+        self.l1_ = classitems.TensorScalarItem()
+        self.l2_ = classitems.TensorScalarItem()
+        if K == 4:
+            self.l3_ = classitems.TensorScalarItem()
+            self.l4_ = classitems.TensorScalarItem()
 
     def print_args(self):
         setup_logger('log_info', self.workdir+'/info_file.txt',
@@ -49,11 +55,11 @@ class Baseline(pytorchfw):
                     f'U-Net Input channels {INPUT_CHANNELS}\r\t'
                     f'U-Net Batch normalization {USE_BN} \r\t')
 
-    def set_optim(self,*args,**kwargs):
+    def set_optim(self, *args, **kwargs):
         if OPTIMIZER == 'adam':
-            return torch.optim.Adam(*args,**kwargs)
+            return torch.optim.Adam(*args, **kwargs)
         elif OPTIMIZER == 'SGD':
-            return torch.optim.SGD(*args,**kwargs)
+            return torch.optim.SGD(*args, **kwargs)
         else:
             raise Exception('Non considered optimizer. Implement it')
 
@@ -67,7 +73,7 @@ class Baseline(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = SingleSourceDirectLoss(self.main_device)
+        self.criterion = EnergyBasedLoss(self.main_device)
 
     @config
     @set_training
@@ -103,6 +109,39 @@ class Baseline(pytorchfw):
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):
+        if self.iterating:
+            self.l1_(self.l1, self.state)
+            self.l2_(self.l2, self.state)
+            if K == 4:
+                self.l3_(self.l3, self.state)
+                self.l4_(self.l4, self.state)
+
+            if self.state == 'train':
+                if K == 2:
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
+                elif K == 4:
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
+
+        else:
+            self.l1 = self.l1_.data.update_epoch(self.state)
+            self.l2 = self.l2_.data.update_epoch(self.state)
+            if K == 4:
+                self.l3 = self.l3_.data.update_epoch(self.state)
+                self.l4 = self.l4_.data.update_epoch(self.state)
+
+            if K == 2:
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
+            elif K == 4:
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
+
         text = visualization[1]
         self.writer.add_text('Filepath', text[-1], absolute_iter)
         phase = visualization[0].detach().cpu().clone().numpy()
@@ -116,8 +155,6 @@ class Baseline(pytorchfw):
         gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
         oracle_spec = (mix_mag * gt_masks_linear)
         pred_spec = (mix_mag * pred_masks_linear)
-        j = ISOLATED_SOURCE_ID
-        source = SOURCES_SUBSET[j]
 
         for i, sample in enumerate(text):
             sample_id = os.path.basename(sample)[:-4]
@@ -127,25 +164,26 @@ class Baseline(pytorchfw):
             visuals_out_folder = os.path.join(self.visual_dumps_folder, folder_name, sample_id)
             create_folder(visuals_out_folder)
 
-            gt_audio = torch.from_numpy(
-                istft_reconstruction(gt_mags.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
-            pred_audio = torch.from_numpy(
-                istft_reconstruction(pred_spec.detach().cpu().numpy()[i][0], phase[i][0], HOP_LENGTH))
-            librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
-                                     gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
-            librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
-                                     pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+            for j, source in enumerate(SOURCES_SUBSET):
+                gt_audio = torch.from_numpy(
+                    istft_reconstruction(gt_mags.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
+                pred_audio = torch.from_numpy(
+                    istft_reconstruction(pred_spec.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
+                librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
+                                         gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+                librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
+                                         pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
 
-            ### SAVING MAG SPECTROGRAMS ###
-            save_spectrogram(gt_mags[i][j].unsqueeze(0).detach().cpu(),
-                             os.path.join(visuals_out_folder, source), '_MAG_GT.png')
-            save_spectrogram(oracle_spec[i][j].unsqueeze(0).detach().cpu(),
-                             os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
-            save_spectrogram(pred_spec[i][0].unsqueeze(0).detach().cpu(),
-                             os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
+                ### PLOTTING MAG SPECTROGRAMS ###
+                save_spectrogram(gt_mags[i][j].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_GT.png')
+                save_spectrogram(oracle_spec[i][j].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
+                save_spectrogram(pred_spec[i][j].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
 
-        ### PLOTTING MAG SPECTROGRAMS ON TENSORBOARD ###
-        plot_spectrogram(self.writer, gt_mags[:, j].detach().cpu().view(-1, 1, 512, 256)[:8],
+        ### PLOTTING MAG SPECTROGRAMS ###
+        plot_spectrogram(self.writer, gt_mags.detach().cpu().view(-1, 1, 512, 256)[:8],
                          self.state + '_GT_MAG', absolute_iter)
         plot_spectrogram(self.writer, (pred_masks_linear * mix_mag).detach().cpu().view(-1, 1, 512, 256)[:8],
                          self.state + '_PRED_MAG', absolute_iter)
@@ -155,7 +193,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, verbose=False, useBN=True)
+    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, verbose=False, useBN=True)
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
 
@@ -170,8 +208,8 @@ def main():
     u_net.load_state_dict(new_state_dict, strict=True)
     model = Wrapper(u_net)
 
-    work = Baseline(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
-    work.model_version = 'BASELINE_TESTING'
+    work = EnergyBased(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
+    work.model_version = 'ENERGY_BASED_TESTING'
     work.train()
 
 

@@ -41,15 +41,15 @@ class EnergyBasedLoss(torch.nn.Module):
     def forward(self, x):
         gt_mags, _, gt_masks, pred_masks = x
         l1 = self.L1Loss(pred_masks[:, 0], gt_masks[:, 0])
-        w1 = 1/pow(gt_mags[:, 0].pow(2).sum(), 1)
+        w1 = (255/175)**2 #pow(gt_mags[:, 0].pow(2).sum(), 1)
         l2 = self.L1Loss(pred_masks[:, 1], gt_masks[:, 1])
-        w2 = 1 / pow(gt_mags[:, 1].pow(2).sum(), 1)
+        w2 = (255/220)**2 #pow(gt_mags[:, 1].pow(2).sum(), 1)
         l11 = w1*l1 + w2*l2
         if K == 4:
             l3 = self.L1Loss(pred_masks[:, 2], gt_masks[:, 2])
-            w3 = 1 / pow(gt_mags[:, 2].pow(2).sum(), 1)
+            w3 = 1 #pow(gt_mags[:, 2].pow(2).sum(), 1)
             l4 = self.L1Loss(pred_masks[:, 3], gt_masks[:, 3])
-            w4 = 1 / pow(gt_mags[:, 3].pow(2).sum(), 1)
+            w4 = (255/218)**2 #pow(gt_mags[:, 3].pow(2).sum(), 1)
             l22 = w3*l3 + w4*l4
             return [l1,l2,l3,l4,l11+l22]
         return [l1,l2,l11]

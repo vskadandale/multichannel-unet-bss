@@ -1,10 +1,12 @@
 import sys
 sys.path.append('..')
+import shutil
 
 from dataset.dataloaders import UnetInput
 from flerken import pytorchfw
 from flerken.models import UNet
-from flerken.framework.pytorchframework import set_training, config, ctx_iter, classitems
+from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
+    classitems,checkpoint_on_key,assert_workdir
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils import *
@@ -29,6 +31,7 @@ class EnergyBased(pytorchfw):
         if K == 4:
             self.l3_ = classitems.TensorScalarItem()
             self.l4_ = classitems.TensorScalarItem()
+        self.best_loss_ = classitems.TensorScalarItem()
 
     def print_args(self):
         setup_logger('log_info', self.workdir+'/info_file.txt',
@@ -113,8 +116,10 @@ class EnergyBased(pytorchfw):
                     self.loss_terms = self.criterion(output)
                     if K == 2:
                         [self.l1, self.l2, self.loss] = self.loss_terms
+                        self.best_loss = self.l1.item() + self.l2.item()
                     elif K == 4:
                         [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
+                        self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
                     self.optimizer.zero_grad()
                     self.loss.backward()
                     self.gradients()
@@ -154,6 +159,30 @@ class EnergyBased(pytorchfw):
         self.loss = self.loss_.data.update_epoch(self.state)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
+    @checkpoint_on_key
+    @assert_workdir
+    def save_checkpoint(self, filename=None):
+        state = {
+            'epoch': self.epoch + 1,
+            'iter': self.absolute_iter + 1,
+            'arch': self.model_version,
+            'state_dict': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+            'loss': self.loss_,
+            'key': self.key,
+            'scheduler': self.scheduler.state_dict()
+        }
+        if filename is None:
+            filename = os.path.join(self.workdir, self.checkpoint_name)
+
+        elif isinstance(filename, str):
+            filename = os.path.join(self.workdir, filename)
+        print('Saving checkpoint at : {}'.format(filename))
+        torch.save(state, filename)
+        if self.best_loss_.data.is_best:
+            shutil.copyfile(filename, os.path.join(self.workdir, 'best' + self.checkpoint_name))
+        print('Checkpoint saved successfully')
+
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):
         if self.state == 'train':
             iter_val = absolute_iter
@@ -161,11 +190,16 @@ class EnergyBased(pytorchfw):
             iter_val = absolute_iter + self.val_iterations
 
         if self.iterating:
-            self.l1_(self.l1, self.state)
-            self.l2_(self.l2, self.state)
-            if K == 4:
+            if K == 2:
+                self.l1_(self.l1, self.state)
+                self.l2_(self.l2, self.state)
+                self.best_loss_(self.l1.item()+self.l2.item(), self.state)
+            elif K == 4:
+                self.l1_(self.l1, self.state)
+                self.l2_(self.l2, self.state)
                 self.l3_(self.l3, self.state)
                 self.l4_(self.l4, self.state)
+                self.best_loss_(self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item(), self.state)
 
             if self.state == 'train':
                 if K == 2:
@@ -178,20 +212,22 @@ class EnergyBased(pytorchfw):
                     self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
 
         else:
-            self.l1 = self.l1_.data.update_epoch(self.state)
-            self.l2 = self.l2_.data.update_epoch(self.state)
-            if K == 4:
-                self.l3 = self.l3_.data.update_epoch(self.state)
-                self.l4 = self.l4_.data.update_epoch(self.state)
-
             if K == 2:
+                self.l1 = self.l1_.data.update_epoch(self.state)
+                self.l2 = self.l2_.data.update_epoch(self.state)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
             elif K == 4:
+                self.l1 = self.l1_.data.update_epoch(self.state)
+                self.l2 = self.l2_.data.update_epoch(self.state)
+                self.l3 = self.l3_.data.update_epoch(self.state)
+                self.l4 = self.l4_.data.update_epoch(self.state)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
+            self.best_loss = self.best_loss_.data.update_epoch(self.state)
+
 
         if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
             text = visualization[1]

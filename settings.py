@@ -22,7 +22,7 @@ STFT_WIDTH=int((TARGET_SAMPLING_RATE * DURATION / HOP_LENGTH) + 1)   # 256=(1088
 K = len(SOURCES_SUBSET)  # Number of instruments
 #self.rootdir = set_path(EXPERIMENTS_FOLDER)
 BATCH_SIZE = 16
-LR = 0.01                          # \\TODO 0.01
+LR = 0.001                          # \\TODO 0.01
 EPOCHS = 60000
 DWA_TEMP = 2
 MOMENTUM = 0                        # \\TODO 0.9
@@ -43,7 +43,7 @@ PRETRAINED_UNET_CONFIG='2019-12-01 15:01:42'
 PARAMETER_SAVE_FREQUENCY=100
 
 
-
+"""
 MUSDB_FOLDER_PATH='/media/venkatesh/slave/dataset/musdb'
 INDIAN_SAMPLE_DATA='/media/venkatesh/slave/dataset/Indian_Music/sample/X'
 EXPERIMENTS_FOLDER='/media/venkatesh/slave/weights'
@@ -60,12 +60,16 @@ DUMPS_FOLDER='/mnt/DATA/dumps'
 SEPERATED_OUTPUT_PATH='/mnt/DATA/datasets/musdb/output_crumbs'
 OUTPUT_PATH='/mnt/DATA/datasets/musdb/output'
 RESULTS_PATH='/mnt/DATA/datasets/musdb/results'
-"""
+
 
 
 
 ROOT_DIR = set_path(EXPERIMENTS_FOLDER)
 PRETRAINED_UNET_WEIGHTS_PATH=os.path.join(EXPERIMENTS_FOLDER,PRETRAINED_UNET_CONFIG,'bestcheckpoint.pth')
+TEST_UNET_CONFIG='2020-01-17 17:37:55'#'2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
+TEST_UNET_WEIGHTS_PATH=os.path.join(EXPERIMENTS_FOLDER,TEST_UNET_CONFIG,'bestcheckpoint.pth')
+TEST_UNET_REFINED_CONFIG='2019-12-18 18:53:17'
+TEST_UNET_REFINED_WEIGHTS_PATH=os.path.join(EXPERIMENTS_FOLDER,TEST_UNET_REFINED_CONFIG,'bestcheckpoint.pth')
 RAW_MUSDB_PATH=os.path.join(MUSDB_FOLDER_PATH,'musdb18')
 MUSDB_WAVS_FOLDER_PATH=os.path.join(MUSDB_FOLDER_PATH,'musdb18_wavs')
 ENERGY_PROFILE_FOLDER=os.path.join(MUSDB_FOLDER_PATH,'energy_profile')
