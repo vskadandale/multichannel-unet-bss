@@ -100,9 +100,11 @@ class DWA(pytorchfw):
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                 self.loss_terms = self.criterion(output)
                 if K == 2:
-                    [self.l1, self.l2, self.loss] = self.loss_terms
+                    [self.l1, self.l2] = self.loss_terms
+                    self.loss = self.l1 + self.l2
                 elif K == 4:
-                    [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
+                    [self.l1, self.l2, self.l3, self.l4] = self.loss_terms
+                    self.loss = self.l1 + self.l2 + self.l3 + self.l4
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                 pbar.set_postfix(loss=self.loss.item())
         self.loss = self.loss_.data.update_epoch(self.state)

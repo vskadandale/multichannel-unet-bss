@@ -152,8 +152,10 @@ class EnergyBased(pytorchfw):
                 self.loss_terms = self.criterion(output)
                 if K == 2:
                     [self.l1, self.l2, self.loss] = self.loss_terms
+                    self.best_loss = self.l1.item() + self.l2.item()
                 elif K == 4:
                     [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
+                    self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                 pbar.set_postfix(loss=self.loss.item())
         self.loss = self.loss_.data.update_epoch(self.state)
@@ -193,13 +195,13 @@ class EnergyBased(pytorchfw):
             if K == 2:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
-                self.best_loss_(self.l1.item()+self.l2.item(), self.state)
+                self.best_loss_(self.l1+self.l2, self.state)
             elif K == 4:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
                 self.l3_(self.l3, self.state)
                 self.l4_(self.l4, self.state)
-                self.best_loss_(self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item(), self.state)
+                self.best_loss_(self.l1 + self.l2 + self.l3 + self.l4, self.state)
 
             if self.state == 'train':
                 if K == 2:
