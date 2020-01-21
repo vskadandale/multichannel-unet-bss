@@ -56,13 +56,13 @@ class Baseline(pytorchfw):
         self.dataparallel = False
         self.initializer = INITIALIZER
         self.EPOCHS = EPOCHS
-        self.optimizer = self.set_optim(self.model.parameters(), lr=LR)
+        self.optimizer = self.set_optim(self.model.parameters(), momentum=MOMENTUM, lr=LR)
         self.LR = LR
         self.scheduler = ReduceLROnPlateau(self.optimizer, patience=7, threshold=3e-4)
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = SingleSourceDirectLoss(self.main_device)
+        self.criterion = SingleSourceDirectLoss(self.main_device, self.grid_unwarp)
 
     @config
     @set_training
