@@ -30,7 +30,7 @@ for i, folder in enumerate(folders):
         y_i, _ = librosa.load(os.path.join(COMPARISON, category, folder, source + '.wav'), sr=sr)
 
         if idx == 0:
-            L = len(y_i)
+            L = len(gt_i)
             gt = np.zeros([len(SOURCES_SUBSET), L])
             y = np.zeros([len(SOURCES_SUBSET), L])
 
