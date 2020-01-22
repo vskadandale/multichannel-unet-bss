@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('..')
 import shutil
 
@@ -6,7 +7,7 @@ from dataset.dataloaders import UnetInput
 from flerken import pytorchfw
 from flerken.models import UNet
 from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
-    classitems,checkpoint_on_key,assert_workdir
+    classitems, checkpoint_on_key, assert_workdir
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils import *
@@ -19,10 +20,10 @@ from settings import *
 class EnergyBased(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
         super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
-        self.audio_dumps_path=os.path.join(DUMPS_FOLDER, 'audio')
+        self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
-        self.audio_dumps_folder=None
-        self.visual_dumps_folder=None
+        self.audio_dumps_folder = None
+        self.visual_dumps_folder = None
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
@@ -34,7 +35,7 @@ class EnergyBased(pytorchfw):
         self.best_loss_ = classitems.TensorScalarItem()
 
     def print_args(self):
-        setup_logger('log_info', self.workdir+'/info_file.txt',
+        setup_logger('log_info', self.workdir + '/info_file.txt',
                      FORMAT="[%(asctime)-15s %(filename)s:%(lineno)d %(funcName)s] %(message)s]")
         logger = logging.getLogger('log_info')
         self.print_info(logger)
@@ -55,11 +56,11 @@ class EnergyBased(pytorchfw):
                     f'U-Net Input channels {INPUT_CHANNELS}\r\t'
                     f'U-Net Batch normalization {USE_BN} \r\t')
 
-    def set_optim(self,*args,**kwargs):
+    def set_optim(self, *args, **kwargs):
         if OPTIMIZER == 'adam':
-            return torch.optim.Adam(*args,**kwargs)
+            return torch.optim.Adam(*args, **kwargs)
         elif OPTIMIZER == 'SGD':
-            return torch.optim.SGD(*args,**kwargs)
+            return torch.optim.SGD(*args, **kwargs)
         else:
             raise Exception('Non considered optimizer. Implement it')
 
@@ -96,7 +97,7 @@ class EnergyBased(pytorchfw):
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
                                                       num_workers=10)
-        for self.epoch in range(self.start_epoch,self.EPOCHS):
+        for self.epoch in range(self.start_epoch, self.EPOCHS):
             with train(self):
                 self.run_epoch(self.train_iter_logger)
             self.scheduler.step(self.loss)
@@ -195,7 +196,7 @@ class EnergyBased(pytorchfw):
             if K == 2:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
-                self.best_loss_(self.l1+self.l2, self.state)
+                self.best_loss_(self.l1 + self.l2, self.state)
             elif K == 4:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
@@ -230,12 +231,11 @@ class EnergyBased(pytorchfw):
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
             self.best_loss = self.best_loss_.data.update_epoch(self.state)
 
-
         if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
             text = visualization[1]
             self.writer.add_text('Filepath', text[-1], iter_val)
             phase = visualization[0].detach().cpu().clone().numpy()
-            gt_mags, mix_mag, gt_masks, pred_masks = output
+            gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
             if len(text) == BATCH_SIZE:
                 grid_unwarp = self.grid_unwarp
             else:  # for the last batch, where the number of samples are generally lesser than the batch_size

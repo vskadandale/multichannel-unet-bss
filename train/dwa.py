@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('..')
 import shutil
 
@@ -19,10 +20,10 @@ from settings import *
 class DWA(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
         super(DWA, self).__init__(model, rootdir, workname, main_device, trackgrad)
-        self.audio_dumps_path=os.path.join(DUMPS_FOLDER, 'audio')
+        self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
-        self.audio_dumps_folder=None
-        self.visual_dumps_folder=None
+        self.audio_dumps_folder = None
+        self.visual_dumps_folder = None
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
@@ -34,7 +35,7 @@ class DWA(pytorchfw):
         self.best_loss_ = classitems.TensorScalarItem()
 
     def print_args(self):
-        setup_logger('log_info', self.workdir+'/info_file.txt',
+        setup_logger('log_info', self.workdir + '/info_file.txt',
                      FORMAT="[%(asctime)-15s %(filename)s:%(lineno)d %(funcName)s] %(message)s]")
         logger = logging.getLogger('log_info')
         self.print_info(logger)
@@ -55,11 +56,11 @@ class DWA(pytorchfw):
                     f'U-Net Input channels {INPUT_CHANNELS}\r\t'
                     f'U-Net Batch normalization {USE_BN} \r\t')
 
-    def set_optim(self,*args,**kwargs):
+    def set_optim(self, *args, **kwargs):
         if OPTIMIZER == 'adam':
-            return torch.optim.Adam(*args,**kwargs)
+            return torch.optim.Adam(*args, **kwargs)
         elif OPTIMIZER == 'SGD':
-            return torch.optim.SGD(*args,**kwargs)
+            return torch.optim.SGD(*args, **kwargs)
         else:
             raise Exception('Non considered optimizer. Implement it')
 
@@ -70,7 +71,7 @@ class DWA(pytorchfw):
         self.DWA_T = DWA_TEMP
         self.optimizer = self.set_optim(self.model.parameters(), momentum=MOMENTUM, lr=LR)
         self.LR = LR
-        self.K=K
+        self.K = K
         self.scheduler = ReduceLROnPlateau(self.optimizer, patience=7, threshold=3e-4)
 
     def set_config(self):
@@ -102,7 +103,7 @@ class DWA(pytorchfw):
 
         self.avg_cost = np.zeros([self.EPOCHS, self.K], dtype=np.float32)
         self.lambda_weight = np.ones([len(SOURCES_SUBSET), self.EPOCHS])
-        for self.epoch in range(self.start_epoch,self.EPOCHS):
+        for self.epoch in range(self.start_epoch, self.EPOCHS):
             self.cost = np.zeros(self.K, dtype=np.float32)
 
             # apply Dynamic Weight Average
@@ -171,8 +172,8 @@ class DWA(pytorchfw):
                     raise e
 
         self.loss = self.loss_.data.update_epoch(self.state)
-        for idx,src in enumerate(SOURCES_SUBSET):
-            self.writer.add_scalars('weights', {'W_'+src: self.lambda_weight[idx, self.epoch].item()}, self.epoch)
+        for idx, src in enumerate(SOURCES_SUBSET):
+            self.writer.add_scalars('weights', {'W_' + src: self.lambda_weight[idx, self.epoch].item()}, self.epoch)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
         self.__update_db__()
         self.save_checkpoint()
@@ -272,7 +273,7 @@ class DWA(pytorchfw):
             text = visualization[1]
             self.writer.add_text('Filepath', text[-1], iter_val)
             phase = visualization[0].detach().cpu().clone().numpy()
-            gt_mags, mix_mag, gt_masks, pred_masks = output
+            gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
             if len(text) == BATCH_SIZE:
                 grid_unwarp = self.grid_unwarp
             else:  # for the last batch, where the number of samples are generally lesser than the batch_size

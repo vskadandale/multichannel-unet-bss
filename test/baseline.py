@@ -106,7 +106,7 @@ class Baseline(pytorchfw):
         text = visualization[1]
         self.writer.add_text('Filepath', text[-1], absolute_iter)
         phase = visualization[0].detach().cpu().clone().numpy()
-        gt_mags, mix_mag, gt_masks, pred_masks = output
+        gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
         if len(text) == BATCH_SIZE:
             grid_unwarp = self.grid_unwarp
         else:  # for the last batch, where the number of samples are generally lesser than the batch_size

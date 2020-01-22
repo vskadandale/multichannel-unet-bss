@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('..')
 
 from dataset.dataloaders import UnetInput
@@ -23,7 +24,7 @@ class Baseline(pytorchfw):
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
     def print_args(self):
-        setup_logger('log_info', self.workdir+'/info_file.txt',
+        setup_logger('log_info', self.workdir + '/info_file.txt',
                      FORMAT="[%(asctime)-15s %(filename)s:%(lineno)d %(funcName)s] %(message)s]")
         logger = logging.getLogger('log_info')
         self.print_info(logger)
@@ -44,11 +45,11 @@ class Baseline(pytorchfw):
                     f'U-Net Input channels {INPUT_CHANNELS}\r\t'
                     f'U-Net Batch normalization {USE_BN} \r\t')
 
-    def set_optim(self,*args,**kwargs):
+    def set_optim(self, *args, **kwargs):
         if OPTIMIZER == 'adam':
-            return torch.optim.Adam(*args,**kwargs)
+            return torch.optim.Adam(*args, **kwargs)
         elif OPTIMIZER == 'SGD':
-            return torch.optim.SGD(*args,**kwargs)
+            return torch.optim.SGD(*args, **kwargs)
         else:
             raise Exception('Non considered optimizer. Implement it')
 
@@ -85,7 +86,7 @@ class Baseline(pytorchfw):
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
                                                       num_workers=10)
-        for self.epoch in range(self.start_epoch,self.EPOCHS):
+        for self.epoch in range(self.start_epoch, self.EPOCHS):
             with train(self):
                 self.run_epoch(self.train_iter_logger)
             self.scheduler.step(self.loss)
@@ -148,10 +149,10 @@ class Baseline(pytorchfw):
             text = visualization[1]
             self.writer.add_text('Filepath', text[-1], iter_val)
             phase = visualization[0].detach().cpu().clone().numpy()
-            gt_mags, mix_mag, gt_masks, pred_masks = output
-            if len(text)==BATCH_SIZE:
+            gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
+            if len(text) == BATCH_SIZE:
                 grid_unwarp = self.grid_unwarp
-            else:     # for the last batch, where the number of samples are generally lesser than the batch_size
+            else:  # for the last batch, where the number of samples are generally lesser than the batch_size
                 grid_unwarp = torch.from_numpy(
                     warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
             pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)

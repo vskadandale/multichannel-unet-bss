@@ -30,7 +30,7 @@ def split_sources(sources, flag):
         splits = np.reshape(splits, splits.shape[:-1] + (M, window))
     else:
         zero_padding = window - np.max(sources.shape) % window
-        splits = np.concatenate([sources, np.zeros([len(SOURCES)+1, zero_padding])], axis=1)
+        splits = np.concatenate([sources, np.zeros([len(SOURCES) + 1, zero_padding])], axis=1)
         splits = np.reshape(splits, splits.shape[:-1] + (M + 1, window))
     return splits
 

@@ -23,8 +23,8 @@ def setup_logger(logger_name, log_file, level=logging.INFO, FORMAT='%(message)s'
 
 def create_folder(path):
     if not os.path.exists(path):
-        os.umask(0)                # To mask the permission restrictions on new files/directories being create
-        os.makedirs(path, 0o755)   # setting permissions for the folder
+        os.umask(0)  # To mask the permission restrictions on new files/directories being create
+        os.makedirs(path, 0o755)  # setting permissions for the folder
 
 
 def power_to_db(S, ref=1.0, amin=1e-10, top_db=80.0):
@@ -179,8 +179,6 @@ def amplitude_to_db(S, ref=1.0, amin=1e-5, top_db=80.0):
     This function caches at level 30.
     '''
 
-
-
     if six.callable(ref):
         # User supplied a function to calculate reference power
         ref_value = ref(S)
@@ -189,12 +187,13 @@ def amplitude_to_db(S, ref=1.0, amin=1e-5, top_db=80.0):
 
     power = S.pow(2)
 
-    return power_to_db(power, ref=ref_value**2, amin=amin**2,top_db=top_db)
+    return power_to_db(power, ref=ref_value ** 2, amin=amin ** 2, top_db=top_db)
 
-def rescale(x,max_range,min_range):
+
+def rescale(x, max_range, min_range):
     max_val = torch.max(x)
     min_val = torch.min(x)
-    return (max_range-min_range)/(max_val-min_val)*(x-max_val)+max_range
+    return (max_range - min_range) / (max_val - min_val) * (x - max_val) + max_range
 
 
 def warpgrid(bs, h, w, warp=True):
@@ -213,7 +212,7 @@ def warpgrid(bs, h, w, warp=True):
     grid = np.zeros((bs, h, w, 2))
     grid_x = xv
     if warp:
-        grid_y = (np.power(21, (yv+1)/2) - 11) / 10
+        grid_y = (np.power(21, (yv + 1) / 2) - 11) / 10
     else:
         grid_y = np.log(yv * 10 + 11) / np.log(21) * 2 - 1
     grid[:, :, :, 0] = grid_x
@@ -223,25 +222,25 @@ def warpgrid(bs, h, w, warp=True):
 
 
 def istft_reconstruction(mag, phase, hop_length=256):
-    spec = mag.astype(np.complex) * np.exp(1j*phase)
+    spec = mag.astype(np.complex) * np.exp(1j * phase)
     wav = librosa.istft(spec, hop_length=hop_length)
     return np.clip(wav, -1., 1.)
 
 
-def linearize_log_freq_scale(nonlinear_vec,grid_unwarp):
+def linearize_log_freq_scale(nonlinear_vec, grid_unwarp):
     linear_vec = F.grid_sample(nonlinear_vec, grid_unwarp)
     return linear_vec
 
 
 def plot_spectrogram(writer, spectrogram, identifier, iter_val):
     spectrogram_db = amplitude_to_db(spectrogram, ref=torch.max)
-    spectrogram_db= rescale(spectrogram_db, min_range=0, max_range=1)
+    spectrogram_db = rescale(spectrogram_db, min_range=0, max_range=1)
     x = torchvision.utils.make_grid(spectrogram_db[:8].detach().cpu(), nrow=4)
     writer.add_images(identifier, x.unsqueeze(0), iter_val)
 
 
-def save_spectrogram(spectrogram,path, identifier):
+def save_spectrogram(spectrogram, path, identifier):
     spectrogram_db = amplitude_to_db(spectrogram, ref=torch.max)
-    spectrogram_db= rescale(spectrogram_db, min_range=0, max_range=1)
+    spectrogram_db = rescale(spectrogram_db, min_range=0, max_range=1)
     img = torchvision.transforms.ToPILImage()(spectrogram_db)
     img.save(path + identifier)
