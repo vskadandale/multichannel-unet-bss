@@ -22,6 +22,7 @@ class Baseline(pytorchfw):
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+        self.val_iterations = 0
 
     def print_args(self):
         setup_logger('log_info', self.workdir + '/info_file.txt',
@@ -126,10 +127,10 @@ class Baseline(pytorchfw):
         self.save_checkpoint()
 
     def validate_epoch(self):
-        self.val_iterations = len(iter(self.val_loader))
         with tqdm(self.val_loader, desc='Validation: [{0}/{1}]'.format(self.epoch, self.EPOCHS)) as pbar, ctx_iter(
                 self):
             for inputs, visualization in pbar:
+                self.val_iterations += 1
                 self.loss_.data.update_timed()
                 inputs = self._allocate_tensor(inputs)
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
@@ -143,7 +144,7 @@ class Baseline(pytorchfw):
         if self.state == 'train':
             iter_val = absolute_iter
         elif self.state == 'val':
-            iter_val = absolute_iter + self.val_iterations
+            iter_val = self.val_iterations
 
         if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
             text = visualization[1]
