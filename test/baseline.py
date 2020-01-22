@@ -26,6 +26,7 @@ class Baseline(pytorchfw):
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, TEST_UNET_CONFIG, 'test')
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+        self.val_iterations = 0
 
     def print_args(self):
         setup_logger('log_info', self.workdir+'/info_file.txt',
@@ -67,7 +68,7 @@ class Baseline(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = SingleSourceDirectLoss(self.main_device, self.grid_unwarp)
+        self.criterion = SingleSourceDirectLoss(self.main_device)
 
     @config
     @set_training
@@ -85,10 +86,10 @@ class Baseline(pytorchfw):
             break
 
     def validate_epoch(self):
-        self.val_iterations = len(iter(self.val_loader))
         with tqdm(self.val_loader, desc='Validation: [{0}/{1}]'.format(self.epoch, self.EPOCHS)) as pbar, ctx_iter(
                 self):
             for inputs, visualization in pbar:
+                self.val_iterations += 1
                 self.loss_.data.update_timed()
                 inputs = self._allocate_tensor(inputs)
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
@@ -104,7 +105,7 @@ class Baseline(pytorchfw):
 
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):
         text = visualization[1]
-        self.writer.add_text('Filepath', text[-1], absolute_iter)
+        self.writer.add_text('Filepath', text[-1], self.val_iterations)
         phase = visualization[0].detach().cpu().clone().numpy()
         gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
         if len(text) == BATCH_SIZE:
@@ -146,9 +147,9 @@ class Baseline(pytorchfw):
 
         ### PLOTTING MAG SPECTROGRAMS ON TENSORBOARD ###
         plot_spectrogram(self.writer, gt_mags[:, j].detach().cpu().view(-1, 1, 512, 256)[:8],
-                         self.state + '_GT_MAG', absolute_iter)
+                         self.state + '_GT_MAG', self.val_iterations)
         plot_spectrogram(self.writer, (pred_masks_linear * mix_mag).detach().cpu().view(-1, 1, 512, 256)[:8],
-                         self.state + '_PRED_MAG', absolute_iter)
+                         self.state + '_PRED_MAG', self.val_iterations  )
 
 
 def main():

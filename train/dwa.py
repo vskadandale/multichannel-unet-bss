@@ -33,6 +33,7 @@ class DWA(pytorchfw):
             self.l3_ = classitems.TensorScalarItem()
             self.l4_ = classitems.TensorScalarItem()
         self.best_loss_ = classitems.TensorScalarItem()
+        self.val_iterations = 0
 
     def print_args(self):
         setup_logger('log_info', self.workdir + '/info_file.txt',
@@ -76,7 +77,7 @@ class DWA(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = IndividualLosses(self.main_device, self.grid_unwarp)
+        self.criterion = IndividualLosses(self.main_device)
 
     @config
     @set_training
@@ -179,10 +180,10 @@ class DWA(pytorchfw):
         self.save_checkpoint()
 
     def validate_epoch(self):
-        self.val_iterations = len(iter(self.val_loader))
         with tqdm(self.val_loader, desc='Validation: [{0}/{1}]'.format(self.epoch, self.EPOCHS)) as pbar, ctx_iter(
                 self):
             for inputs, visualization in pbar:
+                self.val_iterations += 1
                 self.loss_.data.update_timed()
                 inputs = self._allocate_tensor(inputs)
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
@@ -228,7 +229,7 @@ class DWA(pytorchfw):
         if self.state == 'train':
             iter_val = absolute_iter
         elif self.state == 'val':
-            iter_val = absolute_iter + self.val_iterations
+            iter_val = self.val_iterations
 
         if self.iterating:
             if K == 2:
@@ -252,6 +253,53 @@ class DWA(pytorchfw):
                     self.writer.add_scalars('losses', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
                     self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
 
+            if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
+                text = visualization[1]
+                self.writer.add_text('Filepath', text[-1], iter_val)
+                phase = visualization[0].detach().cpu().clone().numpy()
+                gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
+                if len(text) == BATCH_SIZE:
+                    grid_unwarp = self.grid_unwarp
+                else:  # for the last batch, where the number of samples are generally lesser than the batch_size
+                    grid_unwarp = torch.from_numpy(
+                        warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+                pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
+                gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
+                oracle_spec = (mix_mag * gt_masks_linear)
+                pred_spec = (mix_mag * pred_masks_linear)
+
+                for i, sample in enumerate(text):
+                    sample_id = os.path.basename(sample)[:-4]
+                    folder_name = os.path.basename(os.path.dirname(sample))
+                    pred_audio_out_folder = os.path.join(self.audio_dumps_folder, folder_name, sample_id)
+                    create_folder(pred_audio_out_folder)
+                    visuals_out_folder = os.path.join(self.visual_dumps_folder, folder_name, sample_id)
+                    create_folder(visuals_out_folder)
+
+                    for j, source in enumerate(SOURCES_SUBSET):
+                        gt_audio = torch.from_numpy(
+                            istft_reconstruction(gt_mags.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
+                        pred_audio = torch.from_numpy(
+                            istft_reconstruction(pred_spec.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
+                        librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
+                                                 gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+                        librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
+                                                 pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+
+                        ### PLOTTING MAG SPECTROGRAMS ###
+                        save_spectrogram(gt_mags[i][j].unsqueeze(0).detach().cpu(),
+                                         os.path.join(visuals_out_folder, source), '_MAG_GT.png')
+                        save_spectrogram(oracle_spec[i][j].unsqueeze(0).detach().cpu(),
+                                         os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
+                        save_spectrogram(pred_spec[i][j].unsqueeze(0).detach().cpu(),
+                                         os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
+
+                ### PLOTTING MAG SPECTROGRAMS ###
+                plot_spectrogram(self.writer, gt_mags.detach().cpu().view(-1, 1, 512, 256)[:8],
+                                 self.state + '_GT_MAG', iter_val)
+                plot_spectrogram(self.writer, (pred_masks_linear * mix_mag).detach().cpu().view(-1, 1, 512, 256)[:8],
+                                 self.state + '_PRED_MAG', iter_val)
+
         else:
             if K == 2:
                 self.l1 = self.l1_.data.update_epoch(self.state)
@@ -268,53 +316,6 @@ class DWA(pytorchfw):
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
             self.best_loss = self.best_loss_.data.update_epoch(self.state)
-
-        if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
-            text = visualization[1]
-            self.writer.add_text('Filepath', text[-1], iter_val)
-            phase = visualization[0].detach().cpu().clone().numpy()
-            gt_mags_sq, pred_mags_sq, gt_mags, mix_mag, gt_masks, pred_masks = output
-            if len(text) == BATCH_SIZE:
-                grid_unwarp = self.grid_unwarp
-            else:  # for the last batch, where the number of samples are generally lesser than the batch_size
-                grid_unwarp = torch.from_numpy(
-                    warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
-            pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
-            gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
-            oracle_spec = (mix_mag * gt_masks_linear)
-            pred_spec = (mix_mag * pred_masks_linear)
-
-            for i, sample in enumerate(text):
-                sample_id = os.path.basename(sample)[:-4]
-                folder_name = os.path.basename(os.path.dirname(sample))
-                pred_audio_out_folder = os.path.join(self.audio_dumps_folder, folder_name, sample_id)
-                create_folder(pred_audio_out_folder)
-                visuals_out_folder = os.path.join(self.visual_dumps_folder, folder_name, sample_id)
-                create_folder(visuals_out_folder)
-
-                for j, source in enumerate(SOURCES_SUBSET):
-                    gt_audio = torch.from_numpy(
-                        istft_reconstruction(gt_mags.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
-                    pred_audio = torch.from_numpy(
-                        istft_reconstruction(pred_spec.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
-                    librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
-                                             gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
-                    librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
-                                             pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
-
-                    ### PLOTTING MAG SPECTROGRAMS ###
-                    save_spectrogram(gt_mags[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_GT.png')
-                    save_spectrogram(oracle_spec[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
-                    save_spectrogram(pred_spec[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
-
-            ### PLOTTING MAG SPECTROGRAMS ###
-            plot_spectrogram(self.writer, gt_mags.detach().cpu().view(-1, 1, 512, 256)[:8],
-                             self.state + '_GT_MAG', iter_val)
-            plot_spectrogram(self.writer, (pred_masks_linear * mix_mag).detach().cpu().view(-1, 1, 512, 256)[:8],
-                             self.state + '_PRED_MAG', iter_val)
 
 
 def main():

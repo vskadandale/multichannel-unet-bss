@@ -63,7 +63,7 @@ class Baseline(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = SingleSourceDirectLoss(self.main_device, self.grid_unwarp)
+        self.criterion = SingleSourceDirectLoss(self.main_device)
 
     @config
     @set_training
