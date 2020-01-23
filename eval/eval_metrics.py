@@ -9,7 +9,8 @@ import librosa
 import mir_eval
 
 SAMPLING_RATE = TARGET_SAMPLING_RATE
-dir_path = os.path.join(DUMPS_FOLDER, 'audio', TEST_UNET_CONFIG, 'test')
+if ISOLATED:
+    TEST_UNET_CONFIG = TYPE+'_baseline'
 output_path = os.path.join(DUMPS_FOLDER, 'stitched', TEST_UNET_CONFIG, 'test')
 folders = os.listdir(output_path)
 

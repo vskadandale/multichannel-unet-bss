@@ -1,5 +1,4 @@
 import torch
-from utils import warpgrid, linearize_log_freq_scale
 from settings import *
 
 
@@ -30,6 +29,22 @@ class IndividualLosses(torch.nn.Module):
             l4 = self.L1Loss(pred_mags_sq[:, 3], gt_mags_sq[:, 3])
             return [l1, l2, l3, l4]
         return [l1, l2]
+
+class UnitWeightedLoss(torch.nn.Module):
+    def __init__(self, main_device):
+        super(UnitWeightedLoss, self).__init__()
+        self.main_device = main_device
+        self.L1Loss = torch.nn.L1Loss().to(main_device)
+
+    def forward(self, x):
+        gt_mags_sq, pred_mags_sq, _, _, _, _ = x
+        l1 = self.L1Loss(pred_mags_sq[:, 0], gt_mags_sq[:, 0])
+        l2 = self.L1Loss(pred_mags_sq[:, 1], gt_mags_sq[:, 1])
+        if K == 4:
+            l3 = self.L1Loss(pred_mags_sq[:, 2], gt_mags_sq[:, 2])
+            l4 = self.L1Loss(pred_mags_sq[:, 3], gt_mags_sq[:, 3])
+            return [l1, l2, l3, l4, l1+l2+l3+l4]
+        return [l1, l2, l1+l2]
 
 
 class EnergyBasedLoss(torch.nn.Module):
