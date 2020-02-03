@@ -76,6 +76,7 @@ class Baseline(pytorchfw):
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, self.workname, 'train')
         create_folder(self.visual_dumps_folder)
 
+        self.optimizer = self.set_optim(self.model.parameters(), momentum=MOMENTUM, lr=LR)
         training_data = UnetInput('train')
         self.train_loader = torch.utils.data.DataLoader(training_data,
                                                         batch_size=BATCH_SIZE,
@@ -199,7 +200,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, verbose=False, useBN=True)
+    u_net = UNet([16, 32, 64, 128, 256, 512], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
     model = Wrapper(u_net)
 
     if not os.path.exists(ROOT_DIR):

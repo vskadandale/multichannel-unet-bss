@@ -284,7 +284,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, verbose=False, useBN=True)
+    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, dropout=DROPOUT, verbose=False, useBN=True)
     model = Wrapper(u_net)
 
     if not os.path.exists(ROOT_DIR):

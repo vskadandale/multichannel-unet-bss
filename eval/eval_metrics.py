@@ -44,7 +44,7 @@ for i, folder in enumerate(folders):
         del y_i
         # gt = gt[:,:y.shape[0]] ##Also measure the impact of this. notice that min and max value indices of gt and estimates do not always coincide (but are closeby)
 
-    (sdr, sir, sar, perm) = mir_eval.separation.bss_eval_sources(gt, y)
+    (sdr, sir, sar, perm) = mir_eval.separation.bss_eval_sources(gt, y, compute_permutation=False)
     row = [*sdr, *sir, *sar]
     print('Perm : ' + str(perm))
     del sdr, sar, sir, perm

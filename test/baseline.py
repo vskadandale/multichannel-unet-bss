@@ -152,7 +152,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, verbose=False, useBN=True)
+    u_net = UNet([16, 32, 64, 128, 256, 512], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
 
