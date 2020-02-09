@@ -119,7 +119,7 @@ class Baseline(pytorchfw):
                     self.loss.backward()
                     self.gradients()
                     self.optimizer.step()
-                    pbar.set_postfix(loss=self.loss.item())
+                    pbar.set_postfix(loss=self.loss)
                     self.loss_.data.print_logger(self.epoch, j, self.train_iterations, logger)
                     self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                     j += 1
@@ -131,7 +131,8 @@ class Baseline(pytorchfw):
                                               .format(os.path.join(self.workdir, 'checkpoint_backup.pth')))
                     self.err_logger.error(str(e))
                     raise e
-        self.loss = self.loss_.data.update_epoch(self.state)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
         self.__update_db__()
         self.save_checkpoint()
@@ -146,8 +147,9 @@ class Baseline(pytorchfw):
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                 self.loss = self.criterion(output)
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-                pbar.set_postfix(loss=self.loss.item())
-        self.loss = self.loss_.data.update_epoch(self.state)
+                pbar.set_postfix(loss=self.loss)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):

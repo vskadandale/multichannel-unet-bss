@@ -2,7 +2,7 @@ class EarlyStopping:
     """Early stopping tracks the validation loss and
     stops the training if the validation loss doesn't improve over consecutive epochs."""
 
-    def __init__(self, patience=70):
+    def __init__(self, patience=60):
         """
         Args:
             patience (int): Patience (in terms of number of epochs) to check validation loss improvement.

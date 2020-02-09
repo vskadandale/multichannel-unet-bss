@@ -93,7 +93,7 @@ class Baseline(pytorchfw):
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                 self.loss = self.criterion(output)
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-                pbar.set_postfix(loss=self.loss.item())
+                pbar.set_postfix(loss=self.loss)
         self.loss = self.loss_.data.update_epoch(self.state)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
@@ -150,7 +150,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([16, 32, 64, 128, 256, 512], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
+    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
 

@@ -26,11 +26,11 @@ class EnergyBased(pytorchfw):
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
-        self.l1_ = classitems.TensorScalarItem()
-        self.l2_ = classitems.TensorScalarItem()
+        self.set_tensor_scalar_item('l1')
+        self.set_tensor_scalar_item('l2')
         if K == 4:
-            self.l3_ = classitems.TensorScalarItem()
-            self.l4_ = classitems.TensorScalarItem()
+            self.set_tensor_scalar_item('l3')
+            self.set_tensor_scalar_item('l4')
         self.val_iterations = 0
 
     def print_args(self):
@@ -105,17 +105,12 @@ class EnergyBased(pytorchfw):
                     [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                 pbar.set_postfix(loss=self.loss.item())
-        self.loss = self.loss_.data.update_epoch(self.state)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):
         if self.iterating:
-            self.l1_(self.l1, self.state)
-            self.l2_(self.l2, self.state)
-            if K == 4:
-                self.l3_(self.l3, self.state)
-                self.l4_(self.l4, self.state)
-
             text = visualization[1]
             self.writer.add_text('Filepath', text[-1], self.val_iterations)
             phase = visualization[0].detach().cpu().clone().numpy()
@@ -163,12 +158,6 @@ class EnergyBased(pytorchfw):
                              self.state + '_PRED_MAG', self.val_iterations)
 
         else:
-            self.l1 = self.l1_.data.update_epoch(self.state)
-            self.l2 = self.l2_.data.update_epoch(self.state)
-            if K == 4:
-                self.l3 = self.l3_.data.update_epoch(self.state)
-                self.l4 = self.l4_.data.update_epoch(self.state)
-
             if K == 2:
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)

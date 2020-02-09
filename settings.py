@@ -7,7 +7,7 @@ def set_path(path):
     return path
 
 
-TYPE = '4src'  # '4src'
+TYPE = '2src'  # '4src'
 ISOLATED = False
 ISOLATED_SOURCE_ID = 0
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
@@ -38,7 +38,7 @@ PRETRAINED = None
 TRACKGRAD = False
 ACTIVATION = None
 INPUT_CHANNELS = 1
-EARLY_STOPPING_PATIENCE = 70
+EARLY_STOPPING_PATIENCE = 60
 
 # CUNet Settings
 FILTERS_LAYER_1 = 16
@@ -60,9 +60,9 @@ VOC_ENERGY = 173.4346
 PARAMETER_SAVE_FREQUENCY = 100
 
 ##### Main Directory Path #####
-# MAIN_DIR_PATH = '/media/venkatesh/slave'
+#MAIN_DIR_PATH = '/media/venkatesh/slave'
 MAIN_DIR_PATH = '/mnt/DATA'
-# MAIN_DIR_PATH = '/homedtic/vshenoykadandale'
+#MAIN_DIR_PATH = '/homedtic/vshenoykadandale'
 
 
 TEST_UNET_CONFIG = '2020-01-31 19:22:35'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'

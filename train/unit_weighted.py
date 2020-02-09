@@ -11,6 +11,7 @@ from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.utils import *
+from utils.EarlyStopping import EarlyStopping
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
@@ -27,12 +28,13 @@ class UnitWeighted(pytorchfw):
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
-        self.l1_ = classitems.TensorScalarItem()
-        self.l2_ = classitems.TensorScalarItem()
+        self.set_tensor_scalar_item('l1')
+        self.set_tensor_scalar_item('l2')
         if K == 4:
-            self.l3_ = classitems.TensorScalarItem()
-            self.l4_ = classitems.TensorScalarItem()
-        self.best_loss_ = classitems.TensorScalarItem()
+            self.set_tensor_scalar_item('l3')
+            self.set_tensor_scalar_item('l4')
+        self.set_tensor_scalar_item('loss_tracker')
+        self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
     def print_args(self):
@@ -105,6 +107,13 @@ class UnitWeighted(pytorchfw):
             with val(self):
                 self.run_epoch()
             self.__update_db__()
+            stop = self.EarlyStopChecker.check_improvement(self.loss_tracker_.data.tuple['val'].epoch_array.val,
+                                                           self.epoch)
+            if stop:
+                print('Early Stopping Epoch : [{0}], '
+                      'Best Checkpoint Epoch : [{1}]'.format(self.epoch,
+                                                             self.EarlyStopChecker.best_epoch))
+                break
 
     def train_epoch(self, logger):
         j = 0
@@ -118,15 +127,15 @@ class UnitWeighted(pytorchfw):
                     self.loss_terms = self.criterion(output)
                     if K == 2:
                         [self.l1, self.l2, self.loss] = self.loss_terms
-                        self.best_loss = self.l1.item() + self.l2.item()
+                        self.loss_tracker = self.l1 + self.l2
                     elif K == 4:
                         [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                        self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
+                        self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                     self.optimizer.zero_grad()
                     self.loss.backward()
                     self.gradients()
                     self.optimizer.step()
-                    pbar.set_postfix(loss=self.loss.item())
+                    pbar.set_postfix(loss=self.loss)
                     self.loss_.data.print_logger(self.epoch, j, self.train_iterations, logger)
                     self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                     j += 1
@@ -138,7 +147,8 @@ class UnitWeighted(pytorchfw):
                                               .format(os.path.join(self.workdir, 'checkpoint_backup.pth')))
                     self.err_logger.error(str(e))
                     raise e
-        self.loss = self.loss_.data.update_epoch(self.state)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
         self.__update_db__()
         self.save_checkpoint()
@@ -154,13 +164,14 @@ class UnitWeighted(pytorchfw):
                 self.loss_terms = self.criterion(output)
                 if K == 2:
                     [self.l1, self.l2, self.loss] = self.loss_terms
-                    self.best_loss = self.l1.item() + self.l2.item()
+                    self.loss_tracker = self.l1 + self.l2
                 elif K == 4:
                     [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                    self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
+                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-                pbar.set_postfix(loss=self.loss.item())
-        self.loss = self.loss_.data.update_epoch(self.state)
+                pbar.set_postfix(loss=self.loss)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     @checkpoint_on_key
@@ -194,27 +205,6 @@ class UnitWeighted(pytorchfw):
             iter_val = self.val_iterations
 
         if self.iterating:
-            if K == 2:
-                self.l1_(self.l1, self.state)
-                self.l2_(self.l2, self.state)
-                self.best_loss_(self.l1 + self.l2, self.state)
-            elif K == 4:
-                self.l1_(self.l1, self.state)
-                self.l2_(self.l2, self.state)
-                self.l3_(self.l3, self.state)
-                self.l4_(self.l4, self.state)
-                self.best_loss_(self.l1 + self.l2 + self.l3 + self.l4, self.state)
-
-            if self.state == 'train':
-                if K == 2:
-                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
-                elif K == 4:
-                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
-
             if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
                 text = visualization[1]
                 self.writer.add_text('Filepath', text[-1], iter_val)
@@ -264,20 +254,13 @@ class UnitWeighted(pytorchfw):
 
         else:
             if K == 2:
-                self.l1 = self.l1_.data.update_epoch(self.state)
-                self.l2 = self.l2_.data.update_epoch(self.state)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2}, self.epoch)
             elif K == 4:
-                self.l1 = self.l1_.data.update_epoch(self.state)
-                self.l2 = self.l2_.data.update_epoch(self.state)
-                self.l3 = self.l3_.data.update_epoch(self.state)
-                self.l4 = self.l4_.data.update_epoch(self.state)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
-            self.best_loss = self.best_loss_.data.update_epoch(self.state)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4}, self.epoch)
 
 
 def main():
