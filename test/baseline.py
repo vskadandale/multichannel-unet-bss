@@ -1,19 +1,17 @@
 import sys
 sys.path.append('..')
-import shutil
 
 from dataset.dataloaders import UnetInput
 from flerken import pytorchfw
 from flerken.models import UNet
-from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
-    classitems,checkpoint_on_key,assert_workdir
-from flerken.framework import train, val
+from flerken.framework.pytorchframework import set_training, config, ctx_iter
+from flerken.framework import val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
-from collections import  OrderedDict
+from collections import OrderedDict
 from settings import *
 
 

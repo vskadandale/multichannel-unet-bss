@@ -1,11 +1,7 @@
 import sys
 
 sys.path.append('../')
-from pydub import AudioSegment
-from settings import *
-import pandas as pd
-import numpy as np
-from utils import create_folder
+from utils.utils import create_folder
 import librosa
 from settings import *
 

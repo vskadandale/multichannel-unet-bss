@@ -10,7 +10,7 @@ from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
     classitems, checkpoint_on_key, assert_workdir
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *

@@ -10,7 +10,8 @@ from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
     classitems, checkpoint_on_key, assert_workdir
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
+from utils.EarlyStopping import EarlyStopping
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
@@ -32,7 +33,8 @@ class EnergyBased(pytorchfw):
         if K == 4:
             self.l3_ = classitems.TensorScalarItem()
             self.l4_ = classitems.TensorScalarItem()
-        self.best_loss_ = classitems.TensorScalarItem()
+        self.loss_tracker_ = classitems.TensorScalarItem()
+        self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
     def print_args(self):
@@ -105,6 +107,13 @@ class EnergyBased(pytorchfw):
             with val(self):
                 self.run_epoch()
             self.__update_db__()
+            stop = self.EarlyStopChecker.check_improvement(self.loss_tracker_.data.tuple['val'].epoch_array.val,
+                                                           self.epoch)
+            if stop:
+                print('Early Stopping Epoch : [{0}], '
+                      'Best Checkpoint Epoch : [{1}]'.format(self.epoch,
+                                                             self.EarlyStopChecker.best_epoch))
+                break
 
     def train_epoch(self, logger):
         j = 0
@@ -284,7 +293,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, dropout=DROPOUT, verbose=False, useBN=True)
+    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, verbose=False, useBN=True, dropout=DROPOUT)
     model = Wrapper(u_net)
 
     if not os.path.exists(ROOT_DIR):

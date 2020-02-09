@@ -10,7 +10,8 @@ from flerken.framework.pytorchframework import set_training, config, ctx_iter, c
     checkpoint_on_key, assert_workdir
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
+from utils.EarlyStopping import EarlyStopping
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
@@ -27,12 +28,18 @@ class DWA(pytorchfw):
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
 
-        self.l1_ = classitems.TensorScalarItem()
-        self.l2_ = classitems.TensorScalarItem()
+        #self.l1_ = classitems.TensorScalarItem()
+        self.set_tensor_scalar_item('l1')
+        #self.l2_ = classitems.TensorScalarItem()
+        self.set_tensor_scalar_item('l2')
         if K == 4:
-            self.l3_ = classitems.TensorScalarItem()
-            self.l4_ = classitems.TensorScalarItem()
-        self.best_loss_ = classitems.TensorScalarItem()
+            #self.l3_ = classitems.TensorScalarItem()
+            self.set_tensor_scalar_item('l3')
+            #self.l4_ = classitems.TensorScalarItem()
+            self.set_tensor_scalar_item('l4')
+        #self.loss_tracker_ = classitems.TensorScalarItem()
+        self.set_tensor_scalar_item('loss_tracker')
+        self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
     def print_args(self):
@@ -105,7 +112,8 @@ class DWA(pytorchfw):
         self.avg_cost = np.zeros([self.EPOCHS, self.K], dtype=np.float32)
         self.lambda_weight = np.ones([len(SOURCES_SUBSET), self.EPOCHS])
         for self.epoch in range(self.start_epoch, self.EPOCHS):
-            self.cost = np.zeros(self.K, dtype=np.float32)
+            #self.cost = np.zeros(self.K, dtype=np.float32)
+            self.cost = list(torch.zeros(self.K))
 
             # apply Dynamic Weight Average
             if self.epoch == 0 or self.epoch == 1:
@@ -125,7 +133,13 @@ class DWA(pytorchfw):
                 self.run_epoch()
 
             self.__update_db__()
-
+            stop = self.EarlyStopChecker.check_improvement(self.loss_tracker_.data.tuple['val'].epoch_array.val,
+                                                           self.epoch)
+            if stop:
+                print('Early Stopping Epoch : [{0}], '
+                      'Best Checkpoint Epoch : [{1}]'.format(self.epoch,
+                                                             self.EarlyStopChecker.best_epoch))
+                break
             print(
                 'Epoch: {:04d} | TRAIN: {:.4f} {:.4f}'.format(self.epoch,
                                                               self.avg_cost[self.epoch, 0],
@@ -143,22 +157,22 @@ class DWA(pytorchfw):
                     self.component_losses = self.criterion(output)
                     if K == 2:
                         [self.l1, self.l2] = self.component_losses
-                        self.best_loss = self.l1.item() + self.l2.item()
+                        self.loss_tracker = self.l1 + self.l2
                     elif K == 4:
                         [self.l1, self.l2, self.l3, self.l4] = self.component_losses
-                        self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
+                        self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                     self.loss = torch.mean(
                         sum(self.lambda_weight[i, self.epoch] * self.component_losses[i] for i in range(self.K)))
                     self.optimizer.zero_grad()
                     self.loss.backward()
-                    self.avg_cost[self.epoch] += np.array(self.cost) / self.train_batches
+                    self.avg_cost[self.epoch] += torch.stack(self.cost).detach().cpu().clone().numpy() / self.train_batches
                     self.gradients()
                     self.optimizer.step()
                     if K == 2:
-                        self.cost = [self.l1.item(), self.l2.item()]
+                        self.cost = [self.l1, self.l2]
                     elif K == 4:
-                        self.cost = [self.l1.item(), self.l2.item(), self.l3.item(), self.l4.item()]
-                    pbar.set_postfix(loss=self.loss.item())
+                        self.cost = [self.l1, self.l2, self.l3, self.l4]
+                    pbar.set_postfix(loss=self.loss)
                     self.loss_.data.print_logger(self.epoch, j, self.train_iterations, logger)
                     self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                     j += 1
@@ -172,7 +186,9 @@ class DWA(pytorchfw):
                     self.err_logger.error(str(e))
                     raise e
 
-        self.loss = self.loss_.data.update_epoch(self.state)
+        #self.loss = self.loss_.data.update_epoch(self.state)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         for idx, src in enumerate(SOURCES_SUBSET):
             self.writer.add_scalars('weights', {'W_' + src: self.lambda_weight[idx, self.epoch].item()}, self.epoch)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
@@ -190,15 +206,17 @@ class DWA(pytorchfw):
                 self.component_losses = self.criterion(output)
                 if K == 2:
                     [self.l1, self.l2] = self.component_losses
-                    self.best_loss = self.l1.item() + self.l2.item()
+                    self.loss_tracker = self.l1 + self.l2
                 elif K == 4:
                     [self.l1, self.l2, self.l3, self.l4] = self.component_losses
-                    self.best_loss = self.l1.item() + self.l2.item() + self.l3.item() + self.l4.item()
+                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                 self.loss = torch.mean(
                     sum(self.lambda_weight[i, self.epoch] * self.component_losses[i] for i in range(self.K)))
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-                pbar.set_postfix(loss=self.loss.item())
-        self.loss = self.loss_.data.update_epoch(self.state)
+                pbar.set_postfix(loss=self.loss)
+        #self.loss = self.loss_.data.update_epoch(self.state)
+        for tsi in self.tensor_scalar_items:
+            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     @checkpoint_on_key
@@ -221,7 +239,7 @@ class DWA(pytorchfw):
             filename = os.path.join(self.workdir, filename)
         print('Saving checkpoint at : {}'.format(filename))
         torch.save(state, filename)
-        if self.best_loss_.data.is_best:
+        if self.loss_tracker_.data.is_best:
             shutil.copyfile(filename, os.path.join(self.workdir, 'best' + self.checkpoint_name))
         print('Checkpoint saved successfully')
 
@@ -235,23 +253,23 @@ class DWA(pytorchfw):
             if K == 2:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
-                self.best_loss_(self.l1 + self.l2, self.state)
+                self.loss_tracker_(self.l1 + self.l2, self.state)
             elif K == 4:
                 self.l1_(self.l1, self.state)
                 self.l2_(self.l2, self.state)
                 self.l3_(self.l3, self.state)
                 self.l4_(self.l4, self.state)
-                self.best_loss_(self.l1 + self.l2 + self.l3 + self.l4, self.state)
+                self.loss_tracker_(self.l1 + self.l2 + self.l3 + self.l4, self.state)
 
             if self.state == 'train':
                 if K == 2:
-                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Acc Est Loss': self.l2.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Acc Est Loss': self.l2}, self.absolute_iter)
                 elif K == 4:
-                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Drums Est Loss': self.l2.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Bass Est Loss': self.l3.item()}, self.absolute_iter)
-                    self.writer.add_scalars('losses', {'Other Est Loss': self.l4.item()}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Voice Est Loss': self.l1}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Drums Est Loss': self.l2}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Bass Est Loss': self.l3}, self.absolute_iter)
+                    self.writer.add_scalars('losses', {'Other Est Loss': self.l4}, self.absolute_iter)
 
             if iter_val % PARAMETER_SAVE_FREQUENCY == 0:
                 text = visualization[1]
@@ -302,20 +320,20 @@ class DWA(pytorchfw):
 
         else:
             if K == 2:
-                self.l1 = self.l1_.data.update_epoch(self.state)
-                self.l2 = self.l2_.data.update_epoch(self.state)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
+                #self.l1 = self.l1_.data.update_epoch(self.state)
+                #self.l2 = self.l2_.data.update_epoch(self.state)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2}, self.epoch)
             elif K == 4:
-                self.l1 = self.l1_.data.update_epoch(self.state)
-                self.l2 = self.l2_.data.update_epoch(self.state)
-                self.l3 = self.l3_.data.update_epoch(self.state)
-                self.l4 = self.l4_.data.update_epoch(self.state)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
-            self.best_loss = self.best_loss_.data.update_epoch(self.state)
+                #self.l1 = self.l1_.data.update_epoch(self.state)
+                #self.l2 = self.l2_.data.update_epoch(self.state)
+                #self.l3 = self.l3_.data.update_epoch(self.state)
+                #self.l4 = self.l4_.data.update_epoch(self.state)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3}, self.epoch)
+                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4}, self.epoch)
+            #self.loss_tracker = self.loss_tracker_.data.update_epoch(self.state)
 
 
 def main():

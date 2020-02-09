@@ -8,7 +8,7 @@ from flerken.models import UNet
 from flerken.framework.pytorchframework import set_training, config, ctx_iter, classitems
 from flerken.framework import val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *

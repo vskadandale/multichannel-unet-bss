@@ -5,10 +5,11 @@ sys.path.append('..')
 from dataset.dataloaders import UnetInput
 from flerken import pytorchfw
 from flerken.models import UNet
-from flerken.framework.pytorchframework import set_training, config, ctx_iter, classitems
+from flerken.framework.pytorchframework import set_training, config, ctx_iter
 from flerken.framework import train, val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils import *
+from utils.utils import *
+from utils.EarlyStopping import EarlyStopping
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
@@ -22,6 +23,7 @@ class Baseline(pytorchfw):
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+        self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
     def print_args(self):
@@ -95,6 +97,13 @@ class Baseline(pytorchfw):
             with val(self):
                 self.run_epoch()
             self.__update_db__()
+            stop = self.EarlyStopChecker.check_improvement(self.loss_.data.tuple['val'].epoch_array.val,
+                                                           self.epoch)
+            if stop:
+                print('Early Stopping Epoch : [{0}], '
+                      'Best Checkpoint Epoch : [{1}]'.format(self.epoch,
+                                                             self.EarlyStopChecker.best_epoch))
+                break
 
     def train_epoch(self, logger):
         j = 0
@@ -200,7 +209,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # SET MODEL
-    u_net = UNet([16, 32, 64, 128, 256, 512], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
+    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, verbose=False, useBN=True, dropout=DROPOUT)
     model = Wrapper(u_net)
 
     if not os.path.exists(ROOT_DIR):

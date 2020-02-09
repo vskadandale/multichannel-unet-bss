@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 from pydub import AudioSegment
-from utils import create_folder
+from utils.utils import create_folder
 from settings import *
 
 SAMPLING_RATE=TARGET_SAMPLING_RATE
