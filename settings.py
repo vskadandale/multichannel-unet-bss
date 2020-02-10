@@ -8,7 +8,7 @@ def set_path(path):
 
 
 TYPE = '2src'  # '4src'
-ISOLATED = True
+ISOLATED = False
 ISOLATED_SOURCE_ID = 0
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
 if TYPE == '2src':
@@ -60,8 +60,8 @@ VOC_ENERGY = 173.4346
 PARAMETER_SAVE_FREQUENCY = 100
 
 ##### Main Directory Path #####
-#MAIN_DIR_PATH = '/media/venkatesh/slave'
-MAIN_DIR_PATH = '/mnt/DATA'
+MAIN_DIR_PATH = '/media/venkatesh/slave'
+#MAIN_DIR_PATH = '/mnt/DATA'
 #MAIN_DIR_PATH = '/homedtic/vshenoykadandale'
 
 

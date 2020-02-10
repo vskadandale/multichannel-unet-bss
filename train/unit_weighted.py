@@ -33,7 +33,6 @@ class UnitWeighted(pytorchfw):
         if K == 4:
             self.set_tensor_scalar_item('l3')
             self.set_tensor_scalar_item('l4')
-        self.set_tensor_scalar_item('loss_tracker')
         self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
@@ -107,7 +106,7 @@ class UnitWeighted(pytorchfw):
             with val(self):
                 self.run_epoch()
             self.__update_db__()
-            stop = self.EarlyStopChecker.check_improvement(self.loss_tracker_.data.tuple['val'].epoch_array.val,
+            stop = self.EarlyStopChecker.check_improvement(self.loss_.data.tuple['val'].epoch_array.val,
                                                            self.epoch)
             if stop:
                 print('Early Stopping Epoch : [{0}], '
@@ -127,10 +126,8 @@ class UnitWeighted(pytorchfw):
                     self.loss_terms = self.criterion(output)
                     if K == 2:
                         [self.l1, self.l2, self.loss] = self.loss_terms
-                        self.loss_tracker = self.l1 + self.l2
                     elif K == 4:
                         [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                        self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                     self.optimizer.zero_grad()
                     self.loss.backward()
                     self.gradients()
@@ -164,10 +161,8 @@ class UnitWeighted(pytorchfw):
                 self.loss_terms = self.criterion(output)
                 if K == 2:
                     [self.l1, self.l2, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2
                 elif K == 4:
                     [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                 pbar.set_postfix(loss=self.loss)
         for tsi in self.tensor_scalar_items:
@@ -194,7 +189,7 @@ class UnitWeighted(pytorchfw):
             filename = os.path.join(self.workdir, filename)
         print('Saving checkpoint at : {}'.format(filename))
         torch.save(state, filename)
-        if self.loss_tracker_.data.is_best:
+        if self.loss_.data.is_best:
             shutil.copyfile(filename, os.path.join(self.workdir, 'best' + self.checkpoint_name))
         print('Checkpoint saved successfully')
 
