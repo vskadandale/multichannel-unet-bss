@@ -194,7 +194,7 @@ class UnitWeighted(pytorchfw):
             filename = os.path.join(self.workdir, filename)
         print('Saving checkpoint at : {}'.format(filename))
         torch.save(state, filename)
-        if self.best_loss_.data.is_best:
+        if self.loss_tracker_.data.is_best:
             shutil.copyfile(filename, os.path.join(self.workdir, 'best' + self.checkpoint_name))
         print('Checkpoint saved successfully')
 

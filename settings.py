@@ -8,7 +8,7 @@ def set_path(path):
 
 
 TYPE = '2src'  # '4src'
-ISOLATED = False
+ISOLATED = True
 ISOLATED_SOURCE_ID = 0
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
 if TYPE == '2src':
