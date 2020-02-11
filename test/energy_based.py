@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('..')
 
 from dataset.dataloaders import UnetInput
@@ -12,14 +13,14 @@ from utils.utils import *
 from models.wrapper import Wrapper
 from tqdm import tqdm
 from loss.losses import *
-from collections import  OrderedDict
+from collections import OrderedDict
 from settings import *
 
 
 class EnergyBased(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
         super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
-        self.audio_dumps_path=os.path.join(DUMPS_FOLDER, 'audio')
+        self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.audio_dumps_folder = os.path.join(self.audio_dumps_path, TEST_UNET_CONFIG, 'test')
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, TEST_UNET_CONFIG, 'test')
@@ -34,7 +35,7 @@ class EnergyBased(pytorchfw):
         self.val_iterations = 0
 
     def print_args(self):
-        setup_logger('log_info', self.workdir+'/info_file.txt',
+        setup_logger('log_info', self.workdir + '/info_file.txt',
                      FORMAT="[%(asctime)-15s %(filename)s:%(lineno)d %(funcName)s] %(message)s]")
         logger = logging.getLogger('log_info')
         self.print_info(logger)
@@ -73,7 +74,9 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = EnergyBasedLoss(self.main_device)
+        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
+        # self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
+        # self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
 
     @config
     @set_training
@@ -85,7 +88,7 @@ class EnergyBased(pytorchfw):
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
                                                       num_workers=10)
-        for self.epoch in range(self.start_epoch,self.EPOCHS):
+        for self.epoch in range(self.start_epoch, self.EPOCHS):
             with val(self):
                 self.run_epoch()
             break
