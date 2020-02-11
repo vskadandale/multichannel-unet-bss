@@ -77,7 +77,9 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = EnergyBasedLoss(self.main_device)
+        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
+        #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
+        #self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
 
     @config
     @set_training
