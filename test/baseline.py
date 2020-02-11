@@ -22,8 +22,9 @@ class Baseline(pytorchfw):
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.audio_dumps_folder = os.path.join(self.audio_dumps_path, TEST_UNET_CONFIG, 'test')
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, TEST_UNET_CONFIG, 'test')
+        self.main_device = main_device
         self.grid_unwarp = torch.from_numpy(
-            warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+            warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to(self.main_device)
         self.val_iterations = 0
 
     def print_args(self):
@@ -106,7 +107,7 @@ class Baseline(pytorchfw):
             grid_unwarp = self.grid_unwarp
         else:  # for the last batch, where the number of samples are generally lesser than the batch_size
             grid_unwarp = torch.from_numpy(
-                warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+                warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to(self.main_device)
         pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
         gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
         oracle_spec = (mix_mag * gt_masks_linear)
@@ -147,7 +148,7 @@ class Baseline(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
@@ -163,7 +164,7 @@ def main():
         name = k.replace('model.', '')
         new_state_dict[name] = v
     u_net.load_state_dict(new_state_dict, strict=True)
-    model = Wrapper(u_net)
+    model = Wrapper(u_net, main_device=MAIN_DEVICE)
 
     work = Baseline(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
     work.model_version = 'BASELINE_TESTING'

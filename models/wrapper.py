@@ -5,19 +5,20 @@ from settings import *
 
 
 class Wrapper(torch.nn.Module):
-    def __init__(self, model):
+    def __init__(self, model, main_device=0):
         super(Wrapper, self).__init__()
         self.L = len(SOURCES_SUBSET)
         self.model = model
+        self.main_device = main_device
         self.grid_warp = torch.from_numpy(
-            warpgrid(BATCH_SIZE, 256, STFT_WIDTH, warp=True)).to('cuda')
+            warpgrid(BATCH_SIZE, 256, STFT_WIDTH, warp=True)).to(self.main_device)
 
     def forward(self, x):
         if x.shape[0] == BATCH_SIZE:
             mags = F.grid_sample(x, self.grid_warp)
         else:  # for the last batch, where the number of samples are generally lesser than the batch_size
             custom_grid_warp = torch.from_numpy(
-                warpgrid(x.shape[0], 256, STFT_WIDTH, warp=True)).to('cuda')
+                warpgrid(x.shape[0], 256, STFT_WIDTH, warp=True)).to(self.main_device)
             mags = F.grid_sample(x, custom_grid_warp)
 
         gt_masks = torch.div(mags[:, :-1], mags[:, -1].unsqueeze(1).expand(x.shape[0], self.L, *mags.shape[2:]))

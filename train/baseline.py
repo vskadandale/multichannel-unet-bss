@@ -21,8 +21,9 @@ class Baseline(pytorchfw):
         super(Baseline, self).__init__(model, rootdir, workname, main_device, trackgrad)
         self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
+        self.main_device=main_device
         self.grid_unwarp = torch.from_numpy(
-            warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+            warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to(self.main_device)
         self.EarlyStopChecker = EarlyStopping(patience=EARLY_STOPPING_PATIENCE)
         self.val_iterations = 0
 
@@ -167,7 +168,7 @@ class Baseline(pytorchfw):
                 grid_unwarp = self.grid_unwarp
             else:  # for the last batch, where the number of samples are generally lesser than the batch_size
                 grid_unwarp = torch.from_numpy(
-                    warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to('cuda')
+                    warpgrid(len(text), NFFT // 2 + 1, STFT_WIDTH, warp=False)).to(self.main_device)
             pred_masks_linear = linearize_log_freq_scale(pred_masks, grid_unwarp)
             gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
             oracle_spec = (mix_mag * gt_masks_linear)
@@ -208,11 +209,11 @@ class Baseline(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, verbose=False, useBN=True, dropout=DROPOUT)
-    model = Wrapper(u_net)
+    model = Wrapper(u_net, main_device=MAIN_DEVICE)
 
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')

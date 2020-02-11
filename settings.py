@@ -7,6 +7,7 @@ def set_path(path):
     return path
 
 
+MAIN_DEVICE = 1
 TYPE = '2src'  # '4src'
 ISOLATED = False
 ISOLATED_SOURCE_ID = 0
@@ -60,12 +61,12 @@ VOC_ENERGY = 173.4346
 PARAMETER_SAVE_FREQUENCY = 100
 
 ##### Main Directory Path #####
-MAIN_DIR_PATH = '/media/venkatesh/slave'
-#MAIN_DIR_PATH = '/mnt/DATA'
+#MAIN_DIR_PATH = '/media/venkatesh/slave'
+MAIN_DIR_PATH = '/mnt/DATA'
 #MAIN_DIR_PATH = '/homedtic/vshenoykadandale'
 
 
-TEST_UNET_CONFIG = '2020-02-10 14:55:38'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
+TEST_UNET_CONFIG = '2020-02-11 13:00:57'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
 
 MUSDB_FOLDER_PATH = os.path.join(MAIN_DIR_PATH, 'dataset', 'musdb')
 EXPERIMENTS_FOLDER = os.path.join(MAIN_DIR_PATH, 'weights')
