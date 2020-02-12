@@ -128,12 +128,10 @@ class DWA(pytorchfw):
                 self.run_epoch()
 
             self.__update_db__()
-            stop = self.EarlyStopChecker.check_improvement(self.loss_tracker_.data.tuple['val'].epoch_array.val,
+            stop = self.EarlyStopChecker.check_improvement(self.loss_.data.tuple['val'].epoch_array.val,
                                                            self.epoch)
             if stop:
-                print('Early Stopping Epoch : [{0}], '
-                      'Best Checkpoint Epoch : [{1}]'.format(self.epoch,
-                                                             self.EarlyStopChecker.best_epoch))
+                print('Early Stopping Epoch : [{0}]'.format(self.epoch))
                 break
             print(
                 'Epoch: {:04d} | TRAIN: {:.4f} {:.4f}'.format(self.epoch,

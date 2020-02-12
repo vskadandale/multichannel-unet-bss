@@ -7,7 +7,7 @@ def set_path(path):
     return path
 
 
-MAIN_DEVICE = 1
+MAIN_DEVICE = 0
 TYPE = '2src'  # '4src'
 ISOLATED = False
 ISOLATED_SOURCE_ID = 0
@@ -26,7 +26,7 @@ STFT_WIDTH = int((TARGET_SAMPLING_RATE * DURATION / HOP_LENGTH) + 1)  # 256=(108
 
 K = len(SOURCES_SUBSET)  # Number of instruments
 BATCH_SIZE = 16
-LR = 0.01
+LR = 0.001
 EPOCHS = 60000  # 500
 DWA_TEMP = 2
 MOMENTUM = 0.9
@@ -66,7 +66,7 @@ MAIN_DIR_PATH = '/mnt/DATA'
 #MAIN_DIR_PATH = '/homedtic/vshenoykadandale'
 
 
-TEST_UNET_CONFIG = '2020-02-11 13:00:57'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
+TEST_UNET_CONFIG = '2020-02-11 21:28:41'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
 
 MUSDB_FOLDER_PATH = os.path.join(MAIN_DIR_PATH, 'dataset', 'musdb')
 EXPERIMENTS_FOLDER = os.path.join(MAIN_DIR_PATH, 'weights')
