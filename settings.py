@@ -7,9 +7,9 @@ def set_path(path):
     return path
 
 
-MAIN_DEVICE = 0
-TYPE = '2src'  # '4src'
-ISOLATED = False
+MAIN_DEVICE = 0 
+TYPE = '4src'  # '4src'
+ISOLATED = True
 ISOLATED_SOURCE_ID = 0
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
 if TYPE == '2src':
@@ -26,7 +26,7 @@ STFT_WIDTH = int((TARGET_SAMPLING_RATE * DURATION / HOP_LENGTH) + 1)  # 256=(108
 
 K = len(SOURCES_SUBSET)  # Number of instruments
 BATCH_SIZE = 16
-LR = 0.001
+LR = 0.01
 EPOCHS = 60000  # 500
 DWA_TEMP = 2
 MOMENTUM = 0.9

@@ -114,12 +114,23 @@ class DWA(pytorchfw):
             if self.epoch == 0 or self.epoch == 1:
                 self.lambda_weight[:, self.epoch] = 1.0
             else:
-                self.w_1 = self.avg_cost[self.epoch - 1, 0] / self.avg_cost[self.epoch - 2, 0]
-                self.w_2 = self.avg_cost[self.epoch - 1, 1] / self.avg_cost[self.epoch - 2, 1]
-                self.lambda_weight[0, self.epoch] = \
-                    2 * np.exp(self.w_1 / self.DWA_T) / (np.exp(self.w_1 / self.DWA_T) + np.exp(self.w_2 / self.DWA_T))
-                self.lambda_weight[1, self.epoch] = \
-                    2 * np.exp(self.w_2 / self.DWA_T) / (np.exp(self.w_1 / self.DWA_T) + np.exp(self.w_2 / self.DWA_T))
+                if K == 2:
+                    self.w_1 = self.avg_cost[self.epoch - 1, 0] / self.avg_cost[self.epoch - 2, 0]
+                    self.w_2 = self.avg_cost[self.epoch - 1, 1] / self.avg_cost[self.epoch - 2, 1]
+                    exp_sum = (np.exp(self.w_1 / self.DWA_T) + np.exp(self.w_2 / self.DWA_T))
+                    self.lambda_weight[0, self.epoch] = 2 * np.exp(self.w_1 / self.DWA_T) / exp_sum
+                    self.lambda_weight[1, self.epoch] = 2 * np.exp(self.w_2 / self.DWA_T) / exp_sum
+                elif K == 4:
+                    self.w_1 = self.avg_cost[self.epoch - 1, 0] / self.avg_cost[self.epoch - 2, 0]
+                    self.w_2 = self.avg_cost[self.epoch - 1, 1] / self.avg_cost[self.epoch - 2, 1]
+                    self.w_3 = self.avg_cost[self.epoch - 1, 2] / self.avg_cost[self.epoch - 2, 2]
+                    self.w_4 = self.avg_cost[self.epoch - 1, 3] / self.avg_cost[self.epoch - 2, 3]
+                    exp_sum = np.exp(self.w_1 / self.DWA_T) + np.exp(self.w_2 / self.DWA_T) + np.exp(
+                        self.w_3 / self.DWA_T) + np.exp(self.w_4 / self.DWA_T)
+                    self.lambda_weight[0, self.epoch] = 2 * np.exp(self.w_1 / self.DWA_T) / exp_sum
+                    self.lambda_weight[1, self.epoch] = 2 * np.exp(self.w_2 / self.DWA_T) / exp_sum
+                    self.lambda_weight[2, self.epoch] = 2 * np.exp(self.w_3 / self.DWA_T) / exp_sum
+                    self.lambda_weight[3, self.epoch] = 2 * np.exp(self.w_4 / self.DWA_T) / exp_sum
 
             with train(self):
                 self.run_epoch(self.train_iter_logger)
@@ -158,7 +169,8 @@ class DWA(pytorchfw):
                         sum(self.lambda_weight[i, self.epoch] * self.component_losses[i] for i in range(self.K)))
                     self.optimizer.zero_grad()
                     self.loss.backward()
-                    self.avg_cost[self.epoch] += torch.stack(self.cost).detach().cpu().clone().numpy() / self.train_batches
+                    self.avg_cost[self.epoch] += torch.stack(
+                        self.cost).detach().cpu().clone().numpy() / self.train_batches
                     self.gradients()
                     self.optimizer.step()
                     if K == 2:
