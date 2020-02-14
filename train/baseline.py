@@ -97,7 +97,6 @@ class Baseline(pytorchfw):
             self.scheduler.step(self.loss)
             with val(self):
                 self.run_epoch()
-            self.__update_db__()
             stop = self.EarlyStopChecker.check_improvement(self.loss_.data.tuple['val'].epoch_array.val,
                                                            self.epoch)
             if stop:
@@ -135,7 +134,6 @@ class Baseline(pytorchfw):
         for tsi in self.tensor_scalar_items:
             setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-        self.__update_db__()
         self.save_checkpoint()
 
     def validate_epoch(self):

@@ -138,7 +138,6 @@ class DWA(pytorchfw):
             with val(self):
                 self.run_epoch()
 
-            self.__update_db__()
             stop = self.EarlyStopChecker.check_improvement(self.loss_.data.tuple['val'].epoch_array.val,
                                                            self.epoch)
             if stop:
@@ -196,7 +195,6 @@ class DWA(pytorchfw):
         for idx, src in enumerate(SOURCES_SUBSET):
             self.writer.add_scalars('weights', {'W_' + src: self.lambda_weight[idx, self.epoch].item()}, self.epoch)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-        self.__update_db__()
         self.save_checkpoint()
 
     def validate_epoch(self):
