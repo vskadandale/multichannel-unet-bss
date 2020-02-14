@@ -127,10 +127,10 @@ class DWA(pytorchfw):
                     self.w_4 = self.avg_cost[self.epoch - 1, 3] / self.avg_cost[self.epoch - 2, 3]
                     exp_sum = np.exp(self.w_1 / self.DWA_T) + np.exp(self.w_2 / self.DWA_T) + np.exp(
                         self.w_3 / self.DWA_T) + np.exp(self.w_4 / self.DWA_T)
-                    self.lambda_weight[0, self.epoch] = 2 * np.exp(self.w_1 / self.DWA_T) / exp_sum
-                    self.lambda_weight[1, self.epoch] = 2 * np.exp(self.w_2 / self.DWA_T) / exp_sum
-                    self.lambda_weight[2, self.epoch] = 2 * np.exp(self.w_3 / self.DWA_T) / exp_sum
-                    self.lambda_weight[3, self.epoch] = 2 * np.exp(self.w_4 / self.DWA_T) / exp_sum
+                    self.lambda_weight[0, self.epoch] = 4 * np.exp(self.w_1 / self.DWA_T) / exp_sum
+                    self.lambda_weight[1, self.epoch] = 4 * np.exp(self.w_2 / self.DWA_T) / exp_sum
+                    self.lambda_weight[2, self.epoch] = 4 * np.exp(self.w_3 / self.DWA_T) / exp_sum
+                    self.lambda_weight[3, self.epoch] = 4 * np.exp(self.w_4 / self.DWA_T) / exp_sum
 
             with train(self):
                 self.run_epoch(self.train_iter_logger)
@@ -312,7 +312,7 @@ class DWA(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, verbose=False, useBN=True, dropout=DROPOUT)
@@ -320,7 +320,7 @@ def main():
 
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
-    work = DWA(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
+    work = DWA(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
     work.model_version = 'DWA'
     work.train()
 

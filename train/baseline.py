@@ -209,7 +209,7 @@ class Baseline(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, verbose=False, useBN=True, dropout=DROPOUT)
@@ -217,7 +217,7 @@ def main():
 
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
-    work = Baseline(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
+    work = Baseline(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
     work.model_version = 'BASELINE'
     work.train()
 

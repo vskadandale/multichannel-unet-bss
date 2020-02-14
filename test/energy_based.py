@@ -76,8 +76,8 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        #self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
-        self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
+        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
+        #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
         # self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
 
     @config
@@ -176,7 +176,7 @@ class EnergyBased(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, dropout=DROPOUT, verbose=False, useBN=True)
@@ -194,7 +194,7 @@ def main():
     u_net.load_state_dict(new_state_dict, strict=True)
     model = Wrapper(u_net, main_device=MAIN_DEVICE)
 
-    work = EnergyBased(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
+    work = EnergyBased(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
     work.model_version = 'ENERGY_BASED_TESTING'
     work.train()
 

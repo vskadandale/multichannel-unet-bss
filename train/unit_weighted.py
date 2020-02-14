@@ -260,7 +260,7 @@ class UnitWeighted(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, dropout=DROPOUT, verbose=False, useBN=True)

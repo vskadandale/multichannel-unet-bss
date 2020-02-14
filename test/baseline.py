@@ -148,7 +148,7 @@ class Baseline(pytorchfw):
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
     u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, dropout=DROPOUT, verbose=False, useBN=True)
@@ -166,7 +166,7 @@ def main():
     u_net.load_state_dict(new_state_dict, strict=True)
     model = Wrapper(u_net, main_device=MAIN_DEVICE)
 
-    work = Baseline(model, ROOT_DIR, PRETRAINED, trackgrad=TRACKGRAD)
+    work = Baseline(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
     work.model_version = 'BASELINE_TESTING'
     work.train()
 
