@@ -135,3 +135,7 @@ dmypy.json
 
 # nohup generated while running code in bg
 *nohup*
+
+# .idea files
+.idea*
+.idea/workspace.xml

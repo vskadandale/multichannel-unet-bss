@@ -244,3 +244,12 @@ def save_spectrogram(spectrogram, path, identifier):
     spectrogram_db = rescale(spectrogram_db, min_range=0, max_range=1)
     img = torchvision.transforms.ToPILImage()(spectrogram_db)
     img.save(path + identifier)
+
+
+def get_conditions(k):
+    val = np.arange(k)
+    n_val = np.max(val) + 1
+    conditions = list(np.eye(n_val, dtype=np.float)[val])
+    conditions.append(np.ones(k))
+    conditions.append(np.zeros(k))
+    return conditions

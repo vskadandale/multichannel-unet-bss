@@ -2,6 +2,18 @@ import torch
 from settings import *
 
 
+class CUNetLoss(torch.nn.Module):
+    def __init__(self, main_device):
+        super(CUNetLoss, self).__init__()
+        self.main_device = main_device
+        self.L1Loss = torch.nn.L1Loss().to(main_device)
+
+    def forward(self, x):
+        gt_mags_sq, pred_mags_sq, _, _, _, _ = x
+        loss = self.L1Loss(pred_mags_sq, gt_mags_sq)
+        return loss
+
+
 class SingleSourceDirectLoss(torch.nn.Module):
     def __init__(self, main_device):
         super(SingleSourceDirectLoss, self).__init__()

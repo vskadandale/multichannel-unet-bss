@@ -42,7 +42,7 @@ def center_crop(img, output_size):
 
 
 class DenseBlock(nn.Module):
-    def __init__(self, dropout=0.5, bn_momentum=0.1, **kwargs):
+    def __init__(self, K, dropout=0.5, bn_momentum=0.1, **kwargs):
         super(DenseBlock, self).__init__()
         """Defines the dense block which generates complete set of gammas and betas for C-UNet for all the layers
         Args:
@@ -52,17 +52,17 @@ class DenseBlock(nn.Module):
                 gammas: gammas are to be added to specific layers of U-Net as a scaling factor
                 betas: betas are to be added to specific layers as a multiplying factor before gammas are added
         """
-        self.L1 = nn.Linear(4, 16)
+        self.L1 = nn.Linear(K, 32)
         self.ReLu1 = nn.ReLU(0)
-        self.L2 = nn.Linear(16, 128)
+        self.L2 = nn.Linear(32, 512)
         self.ReLu2 = nn.ReLU(0)
         self.DO2 = nn.Dropout(p=dropout)
-        self.BN2 = nn.BatchNorm1d(128, momentum=bn_momentum)
-        self.L3 = nn.Linear(128, 1024)
+        self.BN2 = nn.BatchNorm1d(512, momentum=bn_momentum)
+        self.L3 = nn.Linear(512, 4096)
         self.ReLu3 = nn.ReLU(0)
         self.DO3 = nn.Dropout(p=dropout)
-        self.BN3 = nn.BatchNorm1d(1024, momentum=bn_momentum)
-        self.L4 = nn.Linear(1024, 1008)  # 4064 = 32+64+128+256+512+1024+2048
+        self.BN3 = nn.BatchNorm1d(4096, momentum=bn_momentum)
+        self.L4 = nn.Linear(4096, 4064)  # 4064 = 32+64+128+256+512+1024+2048
         self.ReLu4 = nn.ReLU(0)
 
     def forward(self, c):
@@ -83,7 +83,7 @@ class DenseBlock(nn.Module):
 
 class ConvolutionalBlock(nn.Module):
     def __init__(self, dim_in, dim_out, kernel_conv=3, kernel_MP=2, stride_conv=1, stride_MP=2, padding=1,
-                 bias=True, dropout=False, bn_momentum=0.1, **kwargs):
+                 bias=True, bn_momentum=0.1, **kwargs):
         super(ConvolutionalBlock, self).__init__()
         """Defines a (down)convolutional  block
         Args:
@@ -101,8 +101,6 @@ class ConvolutionalBlock(nn.Module):
                 to_cat: output previous to Max Pooling for skip connections
                 to_down: Max Pooling output to be used as input for next block
         """
-        assert isinstance(dropout, Number)
-        self.dropout = dropout
         self.Conv1 = nn.Conv2d(dim_in, dim_out, kernel_size=kernel_conv, stride=stride_conv, padding=padding,
                                bias=bias)
         self.BN1 = nn.BatchNorm2d(dim_out, momentum=bn_momentum)
@@ -133,7 +131,7 @@ class ConvolutionalBlock(nn.Module):
 
 class AtrousBlock(nn.Module):
     def __init__(self, dim_in, dim_out, kernel_conv=3, kernel_UP=2, stride_conv=1, stride_UP=2, padding=1, bias=True,
-                 finalblock=False, printing=False, bn_momentum=0.1, dropout=False, **kwargs):
+                 finalblock=False, printing=False, bn_momentum=0.1, dropout=0.5, **kwargs):
         """Defines a upconvolutional  block
         Args:
             dim_in: int dimension of feature maps of block input.
@@ -265,7 +263,7 @@ class CUNet(nn.Module):
     # TODO Use bilinear interpolation in addition to upconvolutions
 
     def __init__(self, dimensions_vector, K, verbose=False, input_channels=1,
-                 activation=None, **kwargs):
+                 activation=None, dropout=0.5, **kwargs):
         super(CUNet, self).__init__()
         self.K = K
         self.printing = verbose
@@ -275,8 +273,8 @@ class CUNet(nn.Module):
         self.init_assertion(**kwargs)
 
         self.vec = range(len(self.dim))
-        self.gamma_generator = DenseBlock(**kwargs)
-        self.beta_generator = DenseBlock(**kwargs)
+        self.gamma_generator = DenseBlock(len(SOURCES_SUBSET), dropout=dropout, **kwargs)
+        self.beta_generator = DenseBlock(len(SOURCES_SUBSET), dropout=dropout, **kwargs)
         self.encoder = self.add_encoder(input_channels, **kwargs)
         self.decoder = self.add_decoder(**kwargs)
 
@@ -342,19 +340,19 @@ class CUNet(nn.Module):
         betas = self.beta_generator(c)
         init_index = 0
         if self.printing:
-            print('UNet input size {0}'.format(x.size()))
+            print('CUNet input size {0}'.format(x.size()))
         to_cat_vector = []
         for i in range(len(self.dim) - 1):
             if self.printing:
                 print('Forward Prop through DownConv block {}'.format(i))
             end_index = init_index + self.dim[i]
-            gamma = gammas[:, :, init_index:end_index]
-            beta = betas[:, :, init_index:end_index]
+            gamma = gammas[:, init_index:end_index]
+            beta = betas[:, init_index:end_index]
             to_cat, x = self.encoder[i](x, gamma, beta)
             to_cat_vector.append(to_cat)
             init_index = end_index
-        final_gamma = gammas[:, :, init_index:]
-        final_beta = betas[:, :, init_index:]
+        final_gamma = gammas[:, init_index:]
+        final_beta = betas[:, init_index:]
         for i in self.vec:
             if self.printing:
                 print('Concatenating and Building  UpConv Block {}'.format(i))
@@ -366,6 +364,6 @@ class CUNet(nn.Module):
         if self.activation is not None:
             x = self.final_act(x)
         if self.printing:
-            print('UNet Output size {}'.format(x.size()))
+            print('CUNet Output size {}'.format(x.size()))
 
         return x
