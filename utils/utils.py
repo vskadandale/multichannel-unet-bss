@@ -246,10 +246,11 @@ def save_spectrogram(spectrogram, path, identifier):
     img.save(path + identifier)
 
 
-def get_conditions(k):
+def get_conditions(k, state):
     val = np.arange(k)
     n_val = np.max(val) + 1
     conditions = list(np.eye(n_val, dtype=np.float)[val])
-    conditions.append(np.ones(k))
-    conditions.append(np.zeros(k))
+    if state != 'test':
+        conditions.append(np.ones(k))
+        conditions.append(np.zeros(k))
     return conditions

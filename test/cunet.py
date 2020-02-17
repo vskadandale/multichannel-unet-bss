@@ -2,24 +2,23 @@ import sys
 
 sys.path.append('..')
 
-from dataset.dataloaders import UnetInput
+from dataset.dataloaders import CUnetInput
 from flerken import pytorchfw
-from flerken.models import UNet
-from flerken.framework.pytorchframework import set_training, config, ctx_iter, \
-    classitems
+from models.cunet import CUNet
+from flerken.framework.pytorchframework import set_training, config, ctx_iter
 from flerken.framework import val
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.utils import *
-from models.wrapper import Wrapper
+from models.wrapper import CUNetWrapper
 from tqdm import tqdm
 from loss.losses import *
 from collections import OrderedDict
 from settings import *
 
 
-class EnergyBased(pytorchfw):
+class CUNetTest(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
-        super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
+        super(CUNetTest, self).__init__(model, rootdir, workname, main_device, trackgrad)
         self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.audio_dumps_folder = os.path.join(self.audio_dumps_path, TEST_UNET_CONFIG, 'test')
@@ -27,13 +26,6 @@ class EnergyBased(pytorchfw):
         self.main_device = main_device
         self.grid_unwarp = torch.from_numpy(
             warpgrid(BATCH_SIZE, NFFT // 2 + 1, STFT_WIDTH, warp=False)).to(self.main_device)
-
-        self.set_tensor_scalar_item('l1')
-        self.set_tensor_scalar_item('l2')
-        if K == 4:
-            self.set_tensor_scalar_item('l3')
-            self.set_tensor_scalar_item('l4')
-        self.set_tensor_scalar_item('loss_tracker')
         self.val_iterations = 0
 
     def print_args(self):
@@ -76,17 +68,14 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        #self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
-        #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
-        self.criterion = EnergyBasedLossInstantwise(self.main_device, power=2)
-        # self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
+        self.criterion = CUNetLoss(self.main_device)
 
     @config
     @set_training
     def train(self):
 
         self.print_args()
-        validation_data = UnetInput('test')
+        validation_data = CUnetInput('test')
         self.val_loader = torch.utils.data.DataLoader(validation_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
@@ -103,18 +92,11 @@ class EnergyBased(pytorchfw):
                 self.val_iterations += 1
                 self.loss_.data.update_timed()
                 inputs = self._allocate_tensor(inputs)
-                output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
-                self.loss_terms = self.criterion(output)
-                if K == 2:
-                    [self.l1, self.l2, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2
-                elif K == 4:
-                    [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
+                output = self.model(inputs)
+                self.loss = self.criterion(output)
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
-                pbar.set_postfix(loss=self.loss.item())
-        for tsi in self.tensor_scalar_items:
-            setattr(self, tsi, getattr(self, tsi + '_').data.update_epoch(self.state))
+                pbar.set_postfix(loss=self.loss)
+        self.loss = self.loss_.data.update_epoch(self.state)
         self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
 
     def tensorboard_writer(self, loss, output, gt, absolute_iter, visualization):
@@ -132,8 +114,10 @@ class EnergyBased(pytorchfw):
             gt_masks_linear = linearize_log_freq_scale(gt_masks, grid_unwarp)
             oracle_spec = (mix_mag * gt_masks_linear)
             pred_spec = (mix_mag * pred_masks_linear)
-
+            conditions = visualization[-1]
             for i, sample in enumerate(text):
+                j = torch.nonzero(conditions[i])
+                source = SOURCES_SUBSET[j]
                 sample_id = os.path.basename(sample)[:-4]
                 folder_name = os.path.basename(os.path.dirname(sample))
                 pred_audio_out_folder = os.path.join(self.audio_dumps_folder, folder_name, sample_id)
@@ -141,23 +125,22 @@ class EnergyBased(pytorchfw):
                 visuals_out_folder = os.path.join(self.visual_dumps_folder, folder_name, sample_id)
                 create_folder(visuals_out_folder)
 
-                for j, source in enumerate(SOURCES_SUBSET):
-                    gt_audio = torch.from_numpy(
-                        istft_reconstruction(gt_mags.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
-                    pred_audio = torch.from_numpy(
-                        istft_reconstruction(pred_spec.detach().cpu().numpy()[i][j], phase[i][0], HOP_LENGTH))
-                    librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
-                                             gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
-                    librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
-                                             pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+                gt_audio = torch.from_numpy(
+                    istft_reconstruction(gt_mags.detach().cpu().numpy()[i][0], phase[i][0], HOP_LENGTH))
+                pred_audio = torch.from_numpy(
+                    istft_reconstruction(pred_spec.detach().cpu().numpy()[i][0], phase[i][0], HOP_LENGTH))
+                librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'GT_' + source + '.wav'),
+                                         gt_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
+                librosa.output.write_wav(os.path.join(pred_audio_out_folder, 'PR_' + source + '.wav'),
+                                         pred_audio.cpu().detach().numpy(), TARGET_SAMPLING_RATE)
 
-                    ### PLOTTING MAG SPECTROGRAMS ###
-                    save_spectrogram(gt_mags[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_GT.png')
-                    save_spectrogram(oracle_spec[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
-                    save_spectrogram(pred_spec[i][j].unsqueeze(0).detach().cpu(),
-                                     os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
+                ### PLOTTING MAG SPECTROGRAMS ###
+                save_spectrogram(gt_mags[i][0].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_GT.png')
+                save_spectrogram(oracle_spec[i][0].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_ORACLE.png')
+                save_spectrogram(pred_spec[i][0].unsqueeze(0).detach().cpu(),
+                                 os.path.join(visuals_out_folder, source), '_MAG_ESTIMATE.png')
 
             ### PLOTTING MAG SPECTROGRAMS ###
             plot_spectrogram(self.writer, gt_mags.detach().cpu().view(-1, 1, 512, 256)[:8],
@@ -165,22 +148,12 @@ class EnergyBased(pytorchfw):
             plot_spectrogram(self.writer, (pred_masks_linear * mix_mag).detach().cpu().view(-1, 1, 512, 256)[:8],
                              self.state + '_PRED_MAG', self.val_iterations)
 
-        else:
-            if K == 2:
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Acc Est Loss': self.l2.item()}, self.epoch)
-            elif K == 4:
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Voice Est Loss': self.l1.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
-                self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
-
 
 def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
     # SET MODEL
-    u_net = UNet([32, 64, 128, 256, 512, 1024, 2048], K, None, dropout=DROPOUT, verbose=False, useBN=True)
+    u_net = CUNet([32, 64, 128, 256, 512, 1024, 2048], 1, None, dropout=CUNET_DROPOUT)
     if not os.path.exists(ROOT_DIR):
         raise Exception('Directory does not exist')
 
@@ -193,10 +166,10 @@ def main():
         name = k.replace('model.', '')
         new_state_dict[name] = v
     u_net.load_state_dict(new_state_dict, strict=True)
-    model = Wrapper(u_net, main_device=MAIN_DEVICE)
+    model = CUNetWrapper(u_net, main_device=MAIN_DEVICE)
 
-    work = EnergyBased(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
-    work.model_version = 'ENERGY_BASED_TESTING'
+    work = CUNetTest(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
+    work.model_version = 'CUNET_TESTING'
     work.train()
 
 

@@ -16,7 +16,7 @@ else:
 for element in elements:
     for idx, folder in enumerate(folders):
         folder_path = os.path.join(dir_path, folder)
-        print('Stitching [{0}/{1}] [TRACK NAME]: {2}'.format(idx, len(folders), folder))
+        print('Stitching [{0}/{1}] [TRACK NAME]: {2} [SOURCE]: {3}'.format(idx, len(folders), folder, element))
         combined = AudioSegment.empty()
         combined_path = os.path.join(output_path, folder, element+'.wav')
         create_folder(os.path.dirname(combined_path))

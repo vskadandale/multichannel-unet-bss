@@ -42,7 +42,7 @@ class CUnetInput(torch.utils.data.Dataset):
         self.L = len(SOURCES_SUBSET)
         self.remove_source_ids = np.setdiff1d(np.arange(len(SOURCES)), SOURCES_SUBSET_ID)
 
-        conditions = get_conditions(self.L)
+        conditions = get_conditions(self.L, state)
         self.shortlisted = np.load(FILTERED_SAMPLE_PATHS + '.npy')
         self.input_list = []
         paths = list(Path(self.SPECTROGRAM_DIRECTORY).rglob("*.npy"))  ## Finds all the .npy files in the directory
@@ -65,7 +65,7 @@ class CUnetInput(torch.utils.data.Dataset):
             np.float).eps
         true_label = np.delete(sample['true_label'], self.remove_source_ids, axis=0)
         if not condition.any():
-            target = np.zeros(shape=[1,*mags.shape[1:]]) #+ np.finfo(np.float).eps
+            target = np.zeros(shape=[1, *mags.shape[1:]])  # + np.finfo(np.float).eps
         elif np.prod(condition) == 1:
             target = np.sum(mags[:-1], axis=0)[None]
         else:
@@ -73,4 +73,4 @@ class CUnetInput(torch.utils.data.Dataset):
             target = mags[selected_id][None]
         input_mix = np.concatenate([target, mags[-1][None]], axis=0)
         return [torch.from_numpy(input_mix).float(), torch.from_numpy(condition).float()], \
-               [torch.from_numpy(mixture_phase).unsqueeze(0), file_name, torch.from_numpy(true_label)]
+               [torch.from_numpy(mixture_phase).unsqueeze(0), file_name, torch.from_numpy(true_label), torch.from_numpy(condition).float()]
