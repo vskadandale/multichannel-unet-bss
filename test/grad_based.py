@@ -17,9 +17,9 @@ from collections import OrderedDict
 from settings import *
 
 
-class EnergyBased(pytorchfw):
+class GradBased(pytorchfw):
     def __init__(self, model, rootdir, workname, main_device=0, trackgrad=False):
-        super(EnergyBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
+        super(GradBased, self).__init__(model, rootdir, workname, main_device, trackgrad)
         self.audio_dumps_path = os.path.join(DUMPS_FOLDER, 'audio')
         self.visual_dumps_path = os.path.join(DUMPS_FOLDER, 'visuals')
         self.audio_dumps_folder = os.path.join(self.audio_dumps_path, TEST_UNET_CONFIG, 'test')
@@ -33,6 +33,7 @@ class EnergyBased(pytorchfw):
         if K == 4:
             self.set_tensor_scalar_item('l3')
             self.set_tensor_scalar_item('l4')
+        self.set_tensor_scalar_item('lg')
         self.set_tensor_scalar_item('loss_tracker')
         self.val_iterations = 0
 
@@ -76,7 +77,7 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
+        self.criterion = GradientLoss(self.main_device, power=1)
         #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
         #self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
 
@@ -105,11 +106,11 @@ class EnergyBased(pytorchfw):
                 output = self.model(*inputs) if isinstance(inputs, list) else self.model(inputs)
                 self.loss_terms = self.criterion(output)
                 if K == 2:
-                    [self.l1, self.l2, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2
+                    [self.l1, self.l2, self.lg, self.loss] = self.loss_terms
+                    self.loss_tracker = self.l1 + self.l2 + self.lg
                 elif K == 4:
-                    [self.l1, self.l2, self.l3, self.l4, self.loss] = self.loss_terms
-                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4
+                    [self.l1, self.l2, self.l3, self.l4, self.lg, self.loss] = self.loss_terms
+                    self.loss_tracker = self.l1 + self.l2 + self.l3 + self.l4 + self.lg
                 self.tensorboard_writer(self.loss, output, None, self.absolute_iter, visualization)
                 pbar.set_postfix(loss=self.loss.item())
         for tsi in self.tensor_scalar_items:
@@ -173,6 +174,7 @@ class EnergyBased(pytorchfw):
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Drums Est Loss': self.l2.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Bass Est Loss': self.l3.item()}, self.epoch)
                 self.writer.add_scalars(self.state + ' losses_epoch', {'Other Est Loss': self.l4.item()}, self.epoch)
+            self.writer.add_scalars(self.state + ' losses_epoch', {'Gradient Loss': self.lg}, self.epoch)
 
 
 def main():
@@ -194,8 +196,8 @@ def main():
     u_net.load_state_dict(new_state_dict, strict=True)
     model = Wrapper(u_net, main_device=MAIN_DEVICE)
 
-    work = EnergyBased(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
-    work.model_version = 'ENERGY_BASED_TESTING'
+    work = GradBased(model, ROOT_DIR, PRETRAINED, main_device=MAIN_DEVICE, trackgrad=TRACKGRAD)
+    work.model_version = 'GRAD_BASED_TESTING'
     work.train()
 
 

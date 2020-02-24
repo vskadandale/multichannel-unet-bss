@@ -7,8 +7,8 @@ def set_path(path):
     return path
 
 
-MAIN_DEVICE = 0
-TYPE = '2src'  # '4src'
+MAIN_DEVICE = 1 
+TYPE = '4src'  # '4src'
 ISOLATED = False
 ISOLATED_SOURCE_ID = 1
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
@@ -43,12 +43,10 @@ EARLY_STOPPING_PATIENCE = 60
 
 # CUNet Settings
 FILTERS_LAYER_1 = 32
-CONTROL_TYPE = 'dense'
-FILM_TYPE = 'complex'
 Z_DIM = 4
 N_CONDITIONS = 4064
-N_NEURONS = [16, 128, 1024]
-CUNET_DROPOUT = 0.5
+N_NEURONS = [32, 512, 4096]
+CUNET_DROPOUT = 0.1
 
 ##### ENERGY STATS #####
 ACC_ENERGY = 687.5261
@@ -66,7 +64,7 @@ PARAMETER_SAVE_FREQUENCY = 100
 MAIN_DIR_PATH = '/mnt/DATA'
 
 
-TEST_UNET_CONFIG = '2020-02-16 23:27:05'  # '2020-01-03 11:42:35'#'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
+TEST_UNET_CONFIG = '2020-02-23 23:37:52'  #'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
 
 MUSDB_FOLDER_PATH = os.path.join(MAIN_DIR_PATH, 'dataset', 'musdb')
 EXPERIMENTS_FOLDER = os.path.join(MAIN_DIR_PATH, 'weights')
