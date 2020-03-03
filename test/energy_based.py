@@ -76,16 +76,15 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
         #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
-        #self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
+        self.criterion = EnergyBasedLossPowerPMask(self.main_device, power=1)
 
     @config
     @set_training
     def train(self):
 
         self.print_args()
-        validation_data = UnetInputUnfiltered('test')
+        validation_data = UnetInput('test')
         self.val_loader = torch.utils.data.DataLoader(validation_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,

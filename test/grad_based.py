@@ -86,7 +86,7 @@ class GradBased(pytorchfw):
     def train(self):
 
         self.print_args()
-        validation_data = UnetInputUnfiltered('test')
+        validation_data = UnetInput('test')
         self.val_loader = torch.utils.data.DataLoader(validation_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,

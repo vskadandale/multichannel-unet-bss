@@ -78,9 +78,8 @@ class EnergyBased(pytorchfw):
 
     def set_config(self):
         self.batch_size = BATCH_SIZE
-        self.criterion = EnergyBasedLossPowerP(self.main_device, power=1)
         #self.criterion = EnergyBasedLossInstantwise(self.main_device, power=1)
-        #self.criterion = EnergyBasedLossPowerP(self.main_device, power=2)
+        self.criterion = EnergyBasedLossPowerPMask(self.main_device, power=1)
 
     @config
     @set_training
@@ -92,13 +91,13 @@ class EnergyBased(pytorchfw):
         self.visual_dumps_folder = os.path.join(self.visual_dumps_path, self.workname, 'train')
         create_folder(self.visual_dumps_folder)
 
-        training_data = UnetInputUnfiltered('train')
+        training_data = UnetInput('train')
         self.train_loader = torch.utils.data.DataLoader(training_data,
                                                         batch_size=BATCH_SIZE,
                                                         shuffle=True,
                                                         num_workers=10)
 
-        validation_data = UnetInputUnfiltered('val')
+        validation_data = UnetInput('val')
         self.val_loader = torch.utils.data.DataLoader(validation_data,
                                                       batch_size=BATCH_SIZE,
                                                       shuffle=True,
