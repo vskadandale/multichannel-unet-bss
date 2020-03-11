@@ -1,0 +1,7 @@
+pytorch>=1.2.0
+flerken==0.4.post10
+torchtree-nightly==0.0.2
+librosa=>0.6.2
+tensorboard==1.14.0
+future==0.17.1
+pillow==5.4.1
