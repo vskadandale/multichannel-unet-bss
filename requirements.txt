@@ -1,11 +1,11 @@
-pytorch>=1.2.0
+torch>=1.2.0
 torchvision>=0.2.1
-flerken==0.4.post10
+flerken-nightly==0.4.post10
 torchtree-nightly==0.0.2
 librosa=>0.6.2
-tensorboard==1.14.0
+tensorboard>=1.14.0
 future==0.17.1
-pillow>=6.2.0
+pillow>=5.4.1
 musdb>=0.3.1
 mir-eval>=0.5
 pandas>=1.0.1
