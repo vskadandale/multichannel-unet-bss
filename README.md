@@ -57,9 +57,10 @@ The data preprocessing steps are covered under the folder: code/dataset.
     
   - settings.py is the file that hosts all the important configurations required to be set up before running the experiments.
 
-#### Our Architecture:
+#### <ins>Outline</ins>:
 
-#### References:
+
+#### <ins>References</ins>:
 
 [1] *G. Meseguer-Brocal, and G. Peeters. CONDITIONED-U-NET: Introducing a Control Mechanism in the U-net For Multiple Source Separations. In Proc. of ISMIR (International Society for Music Information Retrieval), Delft, Netherlands, 2019.*
 
