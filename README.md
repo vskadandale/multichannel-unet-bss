@@ -4,7 +4,7 @@
 
 **Note 2**: The data processing portion of the code borrows heavily from [https://github.com/hangzhaomit/Sound-of-Pixels](https://github.com/hangzhaomit/Sound-of-Pixels).
 
-#### Usage Instructions:
+#### <ins>Usage Instructions</ins>:
 This repository is organized as follows:
 The data preprocessing steps are covered under the folder: code/dataset. 
   ```
