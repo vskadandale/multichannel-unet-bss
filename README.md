@@ -6,7 +6,7 @@
 
 #### <ins>Usage Instructions</ins>:
 This repository is organized as follows:
-The data preprocessing steps are covered under the folder: code/dataset. 
+The data preprocessing steps are covered under the folder: code/dataset.  
   ```
   └── dataset
       ├── compute_energy.py
@@ -16,6 +16,7 @@ The data preprocessing steps are covered under the folder: code/dataset.
       └── preprocessing.py
       
   ```
+  Firstly, download the musdb dataset and obtain the samples in .wav format using the command [musdbconvert](https://pypi.org/project/musdb/). Once we have the .wav files in the folder corresponding to MUSDB_WAVS_FOLDER_PATH in settings.py, run the downsample_gt.py script to save a copy of downsampled wav files which will be used as a reference to compute the metrics during evaluation. Run the preprocessing.py script to generate train/val data splits and to convert the .wav samples to spectrograms. To get the track-wise energy profile, run the script compute_energy.py. Now, run filter_musdb_split.py with TYPE = '4src' as well as TYPE = '2src' setting so as to create lists of samples with non-silent sources for both the settings. 
   
   - Models are listed under : code/models.
   ```
@@ -23,6 +24,7 @@ The data preprocessing steps are covered under the folder: code/dataset.
       ├── wrapper.py
       └── cunet.py
   ```
+  The wrapper.py, as the name suggests serves as a wrapper for models used in the experiments. cunet.py contains the code for the Conditioned-U-Net model. Note that we do not have a separately written code for U-Net model because we U-Net is provided by the flerken-nightly 0.4.post10 package.  
   
   - Scripts for training/testing a new model are here: code/train or code/test
   ```
@@ -33,6 +35,7 @@ The data preprocessing steps are covered under the folder: code/dataset.
       ├── unit_weighted.py
       └── energy_based.py
   ```
+  Note that the training experiments need to be run after configuring the settings.py file accordingly. We provided code for baseline.py (dedicated u-nets), cunet.py (Conditioned U-Net), dwa.py (Dynamic Weight Average), and so on. Likewise to test a model, configure the weights path in settings.py along with other options listed there.
   
   - Scripts for evaluating a model are here: code/eval
     ```
@@ -40,6 +43,7 @@ The data preprocessing steps are covered under the folder: code/dataset.
         ├── stitch_audio.py
         └── eval_metrics.py
     ```
+  Again, the settings.py file needs to be configured carefully before running these files. These scripts should be run after testing a model by running a script in code/test folder. stitch_audio.py stitches together the fragments of 6s audio estimated during model testing to form full-length track estimates. Then eval_metrics.py needs to be run to determine the performance of a source separation model in terms of metrics - SDR, SAR and SIR for each full length track. The results are dumped in the dumps folder configured in the settings.py in .csv format. 
   
   - The various loss functions used in the experiments are here: code/loss
     ```
