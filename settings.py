@@ -7,10 +7,10 @@ def set_path(path):
     return path
 
 
-MAIN_DEVICE = 0
-TYPE = '4src'  # '4src'
-ISOLATED = False
-ISOLATED_SOURCE_ID = 0
+MAIN_DEVICE = 0                       #Selects the GPU by its id
+TYPE = '4src'  # '4src'               #Set to either '2src' or '4src' to choose between singing voice separation mode and multi-instrument separation mode  
+ISOLATED = False                      #Set to True only when running baseline.py otherwise, set to False 
+ISOLATED_SOURCE_ID = 0                #When ISOLATED==True, this setting chooses which dedicated source to select based on the id provided here.
 SOURCES = ['vocals', 'accompaniment', 'drums', 'bass', 'other']
 if TYPE == '2src':
     SOURCES_SUBSET = ['vocals', 'accompaniment']
@@ -18,28 +18,28 @@ else:
     SOURCES_SUBSET = ['vocals', 'drums', 'bass', 'other']
 
 ORIGINAL_SAMPLING_RATE = 44100
-TARGET_SAMPLING_RATE = 10880
-DURATION = 6  # in seconds
-NFFT = 1022
-HOP_LENGTH = 256
+TARGET_SAMPLING_RATE = 10880         #Set the downsampling rate.
+DURATION = 6  # in seconds           #Set the duration of sample excerpt   
+NFFT = 1022                          #Set the NFFT parameter for STFT
+HOP_LENGTH = 256                     #Set the Hop Length parameter for STFT 
 STFT_WIDTH = int((TARGET_SAMPLING_RATE * DURATION / HOP_LENGTH) + 1)  # 256=(10880x6/256)+1
 
-K = len(SOURCES_SUBSET)  # Number of instruments
-BATCH_SIZE = 16
-LR = 0.01
-EPOCHS = 60000  # 500
-DWA_TEMP = 2
-MOMENTUM = 0.9
-DROPOUT = 0.1
-WEIGHT_DECAY = 0
-INITIALIZER = 'xavier'
-OPTIMIZER = 'SGD'
-USE_BN = True
+K = len(SOURCES_SUBSET)              #Number of instruments
+BATCH_SIZE = 16                      #Set the batch size
+LR = 0.01                            #Set the learning rate  
+EPOCHS = 60000  # 500                #Set the maximum number of epochs
+DWA_TEMP = 2                         #Set the temperature for DWA (only relevant for DWA experiments) 
+MOMENTUM = 0.9                       #Set the optimizer momentum
+DROPOUT = 0.1                        #Set the dropout
+WEIGHT_DECAY = 0                     #Set the weight decay
+INITIALIZER = 'xavier'               #Set the optimizer initializer
+OPTIMIZER = 'SGD'                    #Set the optimizer type
+USE_BN = True                        #Set True for Batch Normalization           
 PRETRAINED = None
 TRACKGRAD = False
 ACTIVATION = None
-INPUT_CHANNELS = 1
-EARLY_STOPPING_PATIENCE = 60
+INPUT_CHANNELS = 1                   #Number of input channels to the model
+EARLY_STOPPING_PATIENCE = 60         #Set the early stopping patience
 
 # CUNet Settings
 FILTERS_LAYER_1 = 32
@@ -57,14 +57,14 @@ OTH_ENERGY = 216.4932
 VOC_ENERGY = 173.4346
 
 #### TENSORBOARD CONFIG #####
-PARAMETER_SAVE_FREQUENCY = 100
+PARAMETER_SAVE_FREQUENCY = 100           #Set the parameter save frequency for tensorboard
 
 ##### Main Directory Path #####
 #MAIN_DIR_PATH = '/media/venkatesh/slave'
 MAIN_DIR_PATH = '/mnt/DATA'
 
-
-TEST_UNET_CONFIG = '2020-02-29 11:58:56'  #'2020-01-02 19:19:54'#'baseline'#'2020-01-01 20:03:30'#'2019-12-31 14:27:24'#'2019-12-18 18:53:17'
+#Set the model id for testing
+TEST_UNET_CONFIG = '2020-02-29 11:58:56'
 
 MUSDB_FOLDER_PATH = os.path.join(MAIN_DIR_PATH, 'dataset', 'musdb')
 EXPERIMENTS_FOLDER = os.path.join(MAIN_DIR_PATH, 'weights')
@@ -78,6 +78,6 @@ MUSDB_SPLITS_PATH = os.path.join(MUSDB_FOLDER_PATH, 'musdbsplit')
 CHUNKS_PATH = os.path.join(MUSDB_FOLDER_PATH, 'musdb_chunks')
 
 SOURCES_SUBSET_ID = [SOURCES.index(i) for i in SOURCES_SUBSET]
-ENERGY_THRESHOLD = 0
+ENERGY_THRESHOLD = 0                    #Set the energy threshold for considering a sample as silent.
 
 FILTERED_SAMPLE_PATHS = os.path.join(MUSDB_FOLDER_PATH, TYPE + '_filtered')
