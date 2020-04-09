@@ -1,8 +1,6 @@
 #  Multi-task Unet for Music Source Separation
 
-**Note 1**: The pre-trained weights of most of the models used in these experiments are made available here: [https://t.ly/P5DJw](https://t.ly/P5DJw)
-
-**Note 2**: The data processing portion of the code borrows heavily from [https://github.com/hangzhaomit/Sound-of-Pixels](https://github.com/hangzhaomit/Sound-of-Pixels).
+**Note**: The pre-trained weights of most of the models used in these experiments are made available here: [https://t.ly/P5DJw](https://t.ly/P5DJw)
 
 #### <ins>Usage Instructions</ins>:
 This repository is organized as follows:
@@ -65,6 +63,9 @@ The data preprocessing steps are covered under the folder: code/dataset.
 We train a single Multitask-U-Net for multi-instrument source separation using a weighted multi-task loss function. We investigate the source separation task in two settings: 1) singing voice separation (two sources), and 2) multi- instrument source separation (four sources). The number of final output channels of our U-Net corresponds to the total number of sources in the chosen setting. Each loss term in our multi-task loss function corresponds to the loss on the respective source estimates. We explore Dynamic Weighted Average (DWA) and Energy Based Weighting (EBW) strategies to determine the weights for our multi-task loss function. We compare the performance of our U-Net trained with the multi-task loss with that of dedicated U-Nets and the Conditioned-U-Net. Then we investigate the effect of training with the silent-source samples on the performance. We also study the effect of the choice of loss term definition on the source separation performance.
 
 For more details, please check the pre-print [https://arxiv.org/abs/2003.10414](https://arxiv.org/abs/2003.10414).
+
+#### <ins>Acknowledgements</ins>:
+The data processing portion of the code borrows heavily from [https://github.com/hangzhaomit/Sound-of-Pixels](https://github.com/hangzhaomit/Sound-of-Pixels).
 
 #### <ins>References</ins>:
 
