@@ -56,23 +56,36 @@ splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 
 """
 
 f, axes = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
+df = pd.read_csv(os.path.join('trackwise_energy_profile.csv'))
 
-df1=pd.DataFrame(columns=['vocals', 'drums', 'bass', 'rest'])
-df = pd.read_csv(os.path.join(ENERGY_PROFILE_FOLDER, 'trackwise_energy_profile.csv'))
-df1['vocals']=df['Vocals']
-df1['drums']=df['Drums']
-df1['bass']=df['Bass']
-df1['rest']=df['Other']
+FONT_SIZE = 16
 
-splot1 = sns.violinplot(data=df1, orient="h", ax=axes[1], linewidth=2)
-splot1.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 4-sources setting')
+plt.rc('font', size=14)          # controls default text sizes
+df1=pd.DataFrame(columns=['vocals', 'acc'])
+df1['vocals'] = df['Vocals']
+df1['acc'] = df['Accompaniment']
+splot1 = sns.violinplot(data=df1, orient="h", ax=axes[0], linewidth=2)
+splot1.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 2-sources setting')
+splot1.set_ylabel('Source Type', fontsize=FONT_SIZE)
+splot1.set_xlabel('Energy', fontsize=FONT_SIZE)
+splot1.tick_params(axis='x', labelsize=FONT_SIZE)
+splot1.tick_params(axis='y', labelsize=FONT_SIZE)
 
-df2=pd.DataFrame(columns=['vocals', 'acc'])
-df2['vocals'] = df['Vocals']
-df2['acc'] = df['Accompaniment']
+df2=pd.DataFrame(columns=['vocals', 'drums', 'bass', 'rest'])
+df2['vocals']=df['Vocals']
+df2['drums']=df['Drums']
+df2['bass']=df['Bass']
+df2['rest']=df['Other']
 
-splot2 = sns.violinplot(data=df2, orient="h", ax=axes[0], linewidth=2)
-splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 2-sources setting')
+splot2 = sns.violinplot(data=df2, orient="h", ax=axes[1], linewidth=2)
+splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 4-sources setting')
+splot2.tick_params(axis='x', labelsize=FONT_SIZE)
+splot2.tick_params(axis='y', labelsize=FONT_SIZE)
+splot2.set_ylabel('Source Type', fontsize=FONT_SIZE)
+splot2.set_xlabel('Energy', fontsize=FONT_SIZE)
+splot2.set_xticks(np.arange(0, 3000, step=500))
+
+
 
 plt.show()
-f.savefig(os.path.join(ENERGY_PROFILE_FOLDER, 'energy_profile_trackwise.png'), bbox_inches='tight', dpi=600)
+f.savefig(os.path.join(ENERGY_PROFILE_FOLDER, 'energy_profile.png'), bbox_inches='tight', dpi=600)
