@@ -76,4 +76,3 @@ splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 
 
 plt.show()
 f.savefig(os.path.join(ENERGY_PROFILE_FOLDER, 'energy_profile_trackwise.png'), bbox_inches='tight', dpi=600)
-2+3==5
