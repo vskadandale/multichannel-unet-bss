@@ -4,6 +4,7 @@ import pandas as pd
 import seaborn as sns
 from numpy import median
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 from settings import *
 
 #### ENERGY DISTRIBUTION PLOTS ####
@@ -57,19 +58,23 @@ splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 
 
 f, axes = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
 df = pd.read_csv(os.path.join('trackwise_energy_profile.csv'))
+min_max_scaler = preprocessing.MinMaxScaler()
 
 FONT_SIZE = 16
 
 plt.rc('font', size=14)          # controls default text sizes
 df1=pd.DataFrame(columns=['vocals', 'acc'])
-df1['vocals'] = df['Vocals']
+df1['vocals'] = df['Vocals']    # The values in the csv are aggregated over T-F bins
 df1['acc'] = df['Accompaniment']
-splot1 = sns.violinplot(data=df1, orient="h", ax=axes[0], linewidth=2)
+
+splot1 = sns.violinplot(data=df1/(256*512), orient="h", ax=axes[0], linewidth=2)
 splot1.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 2-sources setting')
 splot1.set_ylabel('Source Type', fontsize=FONT_SIZE)
 splot1.set_xlabel('Energy', fontsize=FONT_SIZE)
 splot1.tick_params(axis='x', labelsize=FONT_SIZE)
 splot1.tick_params(axis='y', labelsize=FONT_SIZE)
+splot1.set_xticks(np.arange(0, 0.02, step=0.005))
+splot1.xaxis.set_tick_params(labelbottom=True)
 
 df2=pd.DataFrame(columns=['vocals', 'drums', 'bass', 'rest'])
 df2['vocals']=df['Vocals']
@@ -77,13 +82,13 @@ df2['drums']=df['Drums']
 df2['bass']=df['Bass']
 df2['rest']=df['Other']
 
-splot2 = sns.violinplot(data=df2, orient="h", ax=axes[1], linewidth=2)
+splot2 = sns.violinplot(data=df2/(256*512), orient="h", ax=axes[1], linewidth=2)
 splot2.set(ylabel='Source Type', xlabel='Energy', title='Energy distribution in 4-sources setting')
 splot2.tick_params(axis='x', labelsize=FONT_SIZE)
 splot2.tick_params(axis='y', labelsize=FONT_SIZE)
 splot2.set_ylabel('Source Type', fontsize=FONT_SIZE)
 splot2.set_xlabel('Energy', fontsize=FONT_SIZE)
-splot2.set_xticks(np.arange(0, 3000, step=500))
+splot2.set_xticks(np.arange(0, 0.02, step=0.005))
 
 
 
