@@ -127,6 +127,23 @@ class UnitWeightedLoss(torch.nn.Module):
         return [l1, l2, l1+l2]
 
 
+class SpecChannelUnetLoss(torch.nn.Module):
+    def __init__(self, main_device):
+        super(SpecChannelUnetLoss, self).__init__()
+        self.main_device = main_device
+        self.L1Loss = torch.nn.L1Loss().to(main_device)
+
+    def forward(self, x):
+        gt_mags_sq, pred_mags_sq, _, _, _, _ = x
+        l1 = self.L1Loss(pred_mags_sq[:, 0], gt_mags_sq[:, 0])
+        l2 = self.L1Loss(pred_mags_sq[:, 1], gt_mags_sq[:, 1])
+        if K == 4:
+            l3 = self.L1Loss(pred_mags_sq[:, 2], gt_mags_sq[:, 2])
+            l4 = self.L1Loss(pred_mags_sq[:, 3], gt_mags_sq[:, 3])
+            return [l1, l2, l3, l4, w_1*l1+w_2*l2+w_3*l3+w_4*l4]
+        return [l1, l2, w_1*l1+w_2*l2]
+
+
 class EnergyBasedLossPowerP(torch.nn.Module):
     def __init__(self, main_device, power=1):
         super(EnergyBasedLossPowerP, self).__init__()
