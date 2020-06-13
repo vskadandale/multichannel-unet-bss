@@ -74,7 +74,7 @@ PARAMETER_SAVE_FREQUENCY = 100           #Set the parameter save frequency for t
 MAIN_DIR_PATH = '/mnt/DATA'
 
 #Set the model id for testing
-TEST_UNET_CONFIG = '2020-02-29 11:58:56'
+TEST_UNET_CONFIG = '2020-06-12 20:52:47'   # 2020-06-12 20:54:17
 
 MUSDB_FOLDER_PATH = os.path.join(MAIN_DIR_PATH, 'dataset', 'musdb')
 EXPERIMENTS_FOLDER = os.path.join(MAIN_DIR_PATH, 'weights')
