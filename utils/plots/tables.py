@@ -217,3 +217,71 @@
 \label{2srcresults}
 \end{table}
 """
+
+
+"""
+#### 4src results only SDR
+\begin{table*}[tb]
+\begin{center}
+\caption{Results of Multi-instrument Source Separation in SDR (median in parenthesis)}
+\resizebox{0.7\textwidth}{!}{%
+\LARGE
+\begin{tabular}{|c|c|c|c|c|c|}
+\cline{1-6}
+Model & Vocals & Drums & Bass & Rest & Overall  \\ \hline
+\begin{tabular}[c]{@{}c@{}}Dedicated  \\ U-Nets (x4)\end{tabular} & 
+\textbf{4.96} \(\pm\) 4.63 \textbf{(5.77)} & 
+4.95 \(\pm\) 3.56 (4.60) & 
+\textbf{2.78} \(\pm\) 4.41 \textbf{(3.19)} & 
+1.21 \(\pm\) 3.38 (2.23) & 
+3.48 \(\pm\) 4.30 (3.61)
+\\ \hline \hline \hline
+
+C-U-Net & 4.49 \(\pm\) 4.75 (5.26) & 4.54 \(\pm\) 3.59 (4.30) & 
+2.51 \(\pm\) 4.26 (2.97) & 0.97 \(\pm\) 3.57 (1.69) & 
+3.13 \(\pm\) 4.31 (3.37) 
+\\ \hline \hline
+
+UW & 4.31 \(\pm\) 4.80 (5.46) & 5.19 \(\pm\) 3.51 (4.72) & 
+2.55 \(\pm\) 4.58 (2.81) &  1.51 \(\pm\) 3.32 (2.49) & 
+3.39 \(\pm\) 4.32 (3.58)
+\\ \hline \hline
+
+DWA & 4.36 \(\pm\) 4.64 (5.24) & \textbf{5.22} \(\pm\) 3.54 \textbf{(4.92)} & 
+\textbf{2.78} \(\pm\) 4.54 (2.88) & 1.52 \(\pm\) 3.25 (2.45) & 
+3.47 \(\pm\) 4.25 (3.61)  
+\\ \hline \hline 
+
+EBW P1  & 4.51 \(\pm\) 4.56 (5.41) & 5.13 \(\pm\) 3.50 (4.77) & 
+2.64 \(\pm\) 4.32 (2.94) &  1.59 \(\pm\) 3.17 \textbf{(2.64)} & 
+3.46 \(\pm\) 4.15 (3.65) 
+\\ \hline \hline 
+
+EBW InstP1 & 
+4.49 \(\pm\) 4.62 (5.46) & 
+5.16 \(\pm\) 3.55 (4.85) & 
+2.63 \(\pm\) 4.53 (2.86) & 
+1.58 \(\pm\) 3.18 (2.58) & 
+3.46 \(\pm\) 4.24 (3.52)
+\\ \hline \hline 
+
+Oh et al. \cite{oh2018spectrogram} & 
+4.46 \(\pm\) 4.59 (5.29) & 
+5.08 \(\pm\) 3.55 (4.86) & 
+2.62 \(\pm\) 4.47 (2.85) & 
+\textbf{1.66} \(\pm\) 3.16 (2.55) & 
+3.45 \(\pm\) 4.19 (3.60)
+\\  \hline \hline
+
+EBW P2 & 4.48 \(\pm\) 4.82 (5.44) & 5.17 \(\pm\) 3.60 (4.89) & 
+2.69 \(\pm\) 4.44 (2.99) & 1.62 \(\pm\) 3.14 (2.58) & 
+\textbf{3.49} \(\pm\) 4.26 \textbf{(3.66)}
+\\ \hline \hline
+
+\end{tabular}%
+}
+\label{4srcresults}
+\end{center}
+\end{table*}
+
+"""

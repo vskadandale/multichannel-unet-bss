@@ -28,4 +28,3 @@ g = sns.catplot(x="values", y="model",
 
 plt.savefig(os.path.join(DUMPS_FOLDER, 'results', TYPE, TYPE+'_boxenplots.png'))
 plt.show()
-4+5
