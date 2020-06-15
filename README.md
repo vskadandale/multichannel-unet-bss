@@ -1,6 +1,6 @@
 #  Multi-task Unet for Music Source Separation
 
-**Note**: The pre-trained weights of most of the models used in these experiments are made available here: [https://t.ly/P5DJw](https://t.ly/P5DJw)
+**Note**: The pre-trained weights of most of the models used in these experiments are made available here: [https://shorturl.at/aryOX](https://shorturl.at/aryOX)
 
 #### <ins>Usage Instructions</ins>:
 This repository is organized as follows:
