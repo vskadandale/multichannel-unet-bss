@@ -1,6 +1,8 @@
 #  Multi-task Unet for Music Source Separation
 
-**Note**: The pre-trained weights of most of the models used in these experiments are made available here: [https://shorturl.at/aryOX](https://shorturl.at/aryOX)
+**Note 1**: The pre-trained weights of most of the models used in these experiments are made available here: [https://shorturl.at/aryOX](https://shorturl.at/aryOX)
+
+**Note 2**: For demos, visit our [project webpage](https://vskadandale.github.io/multi-channel-unet/).
 
 #### <ins>Usage Instructions</ins>:
 This repository is organized as follows:
