@@ -1,4 +1,4 @@
-#  Multi-task Unet for Music Source Separation
+#  Multi-channel Unet for Music Source Separation
 
 **Note 1**: The pre-trained weights of most of the models used in these experiments are made available here: [https://shorturl.at/aryOX](https://shorturl.at/aryOX)
 
