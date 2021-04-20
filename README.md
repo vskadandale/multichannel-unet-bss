@@ -75,7 +75,8 @@ The data processing portion of the code borrows heavily from [https://github.com
 
 [2] *A.Jansson, N.Montecchio, R.Bittner, A.Kumar, T.Weyde, E. J. Humphrey. Singing voice separation with deep u-net convolutional networks. In Proc. of ISMIR (International Society for Music Information Retrieval), Suzhou, China, 2017.*
 
-### Citation:
+
+## Citation
 If you find our work useful, please cite our work as follows:
 ```
 @inproceedings{kadandale2020multi,
